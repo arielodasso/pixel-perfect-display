@@ -43,7 +43,7 @@ export const project: Project = {
   name: "Torre Horizonte",
   tagline: "Un nuevo proyecto para vivir en Tandil.",
   description:
-    "Torre Horizonte es un edificio de 8 niveles emplazado a cinco cuadras del centro de Tandil, con vistas abiertas a las sierras. Diseñado con materiales noblesuni, unidades luminosas y espacios comunes pensados para el uso diario: trabajo, descanso y encuentro.",
+    "Torre Horizonte es un edificio de 8 niveles emplazado a cinco cuadras del centro de Tandil, con vistas abiertas a las sierras. Materiales nobles, unidades luminosas y espacios comunes pensados para el uso diario: trabajo, descanso y encuentro.",
   city: "Tandil",
   province: "Buenos Aires",
   address: "Av. Avellaneda 1240, Tandil",
