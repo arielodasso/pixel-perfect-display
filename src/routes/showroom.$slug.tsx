@@ -1,4 +1,4 @@
-import { createFileRoute, Link, notFound } from "@tanstack/react-router";
+import { createFileRoute, Link, notFound, Outlet, useRouterState } from "@tanstack/react-router";
 import { ArrowUpRight, Check, MapPin, MessageCircle, Navigation, Play, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -72,6 +72,7 @@ function Showroom() {
   const settings = useSettings();
   const compare = useCompare();
   const stats = unitStats(units);
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
   const [selected, setSelected] = useState<Unit | null>(null);
   const [formOpen, setFormOpen] = useState(false);
   const [presetUnit, setPresetUnit] = useState<string | null>(null);
@@ -125,6 +126,13 @@ function Showroom() {
   const compareUnits = compare
     .map((code) => units.find((u) => u.code === code))
     .filter((u): u is Unit => Boolean(u));
+
+  // Si la URL cae en una ruta hija (p. ej. /showroom/$slug/tour), la rendimos
+  // directamente: el showroom es una página standalone sin <Outlet /> que
+  // envuelva sus rutas anidadas.
+  if (pathname !== `/showroom/${projectDemo.slug}`) {
+    return <Outlet />;
+  }
 
   return (
     <main className="min-h-screen pb-24">
