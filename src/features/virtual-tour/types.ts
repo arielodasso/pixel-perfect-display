@@ -32,6 +32,39 @@ export interface VirtualTourUnit {
    * cámara por defecto, etc.
    */
   modelUrl?: string;
+  /** Escenas 360° del interior de la unidad (recorrido virtual). */
+  scenes: VirtualTourScene[];
+}
+
+/** Ambientes que componen el recorrido 360° de una unidad. */
+export type VirtualTourSceneKind = "living" | "kitchen" | "bedroom" | "bath" | "balcony";
+
+/** Hotspot 3D dentro de una escena 360° (en grados de yaw/pitch). */
+export interface VirtualTourSceneHotspot {
+  id: string;
+  label: string;
+  /** Azimut en grados (0 = frente de la escena), -180..180 o 0..360. */
+  yaw: number;
+  /** Elevación en grados (-90 = abajo, 90 = arriba). */
+  pitch: number;
+  /** Escena a la que navega. */
+  targetSceneId: string;
+}
+
+/**
+ * Escena de recorrido 360° de un ambiente de la unidad. La textura
+ * equirectangular se genera proceduralmente (ver `panorama.ts`) a partir
+ * de `seed` y `kind`, así el tour funciona sin assets externos.
+ */
+export interface VirtualTourScene {
+  id: string;
+  /** Id de la unidad a la que pertenece. */
+  unitId: string;
+  kind: VirtualTourSceneKind;
+  /** Etiqueta para el navegador de ambientes. */
+  label: string;
+  seed: number;
+  hotspots: VirtualTourSceneHotspot[];
 }
 
 export interface VirtualTourHotspot {

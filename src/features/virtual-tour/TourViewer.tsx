@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
-import { ArrowLeft, Compass, MessageCircle } from "lucide-react";
-import { useMemo, useState } from "react";
+import { ArrowLeft, Box, Compass, MessageCircle } from "lucide-react";
+import { useCallback, useMemo, useState } from "react";
 
 import { PanZoom } from "@/components/interactive/PanZoom";
 import { Button } from "@/components/ui/button";
@@ -11,8 +11,9 @@ import { useCompare } from "@/services/store";
 import type { Organization, Project, Unit } from "@/types/domain";
 
 import { FloorScene } from "./FloorScene";
+import { PanoramaViewer } from "./PanoramaViewer";
 import { UnitTourCard } from "./UnitTourCard";
-import type { VirtualTour, VirtualTourUnit } from "./types";
+import type { VirtualTour, VirtualTourScene, VirtualTourUnit } from "./types";
 
 interface Props {
   tour: VirtualTour;
@@ -48,6 +49,7 @@ export function TourViewer({
     firstFloorWithUnits >= 0 ? firstFloorWithUnits : 0,
   );
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [tour360, setTour360] = useState(false);
 
   const floor = tour.floors[activeIndex];
   const selectedTourUnit = floor?.units.find((unit) => unit.id === selectedId) ?? null;
@@ -57,6 +59,7 @@ export function TourViewer({
     if (index === activeIndex) return;
     setActiveIndex(index);
     setSelectedId(null);
+    setTour360(false);
     const nextFloor = tour.floors[index];
     trackEvent("tour_floor_select", {
       floor: nextFloor?.name ?? "",
@@ -66,8 +69,24 @@ export function TourViewer({
 
   function selectUnit(unit: VirtualTourUnit) {
     setSelectedId(unit.id);
+    setTour360(false);
     trackEvent("tour_unit_select", { unit: unit.code, floor: floor?.name ?? "" });
   }
+
+  function startTour360() {
+    if (!selectedTourUnit || selectedTourUnit.scenes.length === 0) return;
+    setTour360(true);
+    trackEvent("virtual_tour_360_enter", { unit: selectedTourUnit.code });
+  }
+
+  function exitTour360() {
+    setTour360(false);
+    trackEvent("virtual_tour_360_exit", { unit: selectedTourUnit?.code ?? "" });
+  }
+
+  const handleSceneChange = useCallback((scene: VirtualTourScene) => {
+    trackEvent("virtual_tour_360_scene_view", { scene: scene.kind });
+  }, []);
 
   if (!floor) {
     return (
@@ -153,43 +172,67 @@ export function TourViewer({
         <div
           className="relative h-[52vh] min-h-[300px] shrink-0 lg:h-auto lg:flex-1"
           role="region"
-          aria-label={`Planta ${floor.name}`}
+          aria-label={
+            tour360 ? `Recorrido 360° ${selectedTourUnit?.name ?? ""}` : `Planta ${floor.name}`
+          }
         >
-          <PanZoom
-            key={`${tour.id}-${floor.id}`}
-            fit="contain"
-            minScale={0.4}
-            maxScale={8}
-            showControls
-            className="h-full w-full"
-            hint="Arrastrá para mover · rueda o pinch para zoom"
-          >
-            <div className="h-[820px] w-[820px]">
-              <FloorScene
-                floor={floor}
-                selectedId={selectedId}
-                compareCodes={compare}
-                onSelect={selectUnit}
-                className="bg-[oklch(0.16_0.008_265)]"
-              />
-            </div>
-          </PanZoom>
+          {tour360 && selectedTourUnit && selectedTourUnit.scenes.length > 0 ? (
+            <PanoramaViewer
+              key={selectedTourUnit.id}
+              scenes={selectedTourUnit.scenes}
+              initialSceneId={selectedTourUnit.scenes[0]?.id ?? ""}
+              unitLabel={selectedTourUnit.name}
+              onBackToPlan={exitTour360}
+              onSceneChange={handleSceneChange}
+            />
+          ) : (
+            <>
+              <PanZoom
+                key={`${tour.id}-${floor.id}`}
+                fit="contain"
+                minScale={0.4}
+                maxScale={8}
+                showControls
+                className="h-full w-full"
+                hint="Arrastrá para mover · rueda o pinch para zoom"
+              >
+                <div className="h-[820px] w-[820px]">
+                  <FloorScene
+                    floor={floor}
+                    selectedId={selectedId}
+                    compareCodes={compare}
+                    onSelect={selectUnit}
+                    className="bg-[oklch(0.16_0.008_265)]"
+                  />
+                </div>
+              </PanZoom>
 
-          {/* Leyenda */}
-          <div className="pointer-events-none absolute bottom-3 left-3 flex flex-wrap items-center gap-3 rounded-lg border border-border bg-background/75 px-3 py-1.5 text-[11px] text-muted-foreground backdrop-blur-sm">
-            {(
-              [
-                ["Disponible", "disponible"],
-                ["Reservada", "reservada"],
-                ["Vendida", "vendida"],
-              ] as const
-            ).map(([label, status]) => (
-              <span key={status} className="flex items-center gap-1.5">
-                <span className={cn("size-2 rounded-full", STATUS_DOT[status])} />
-                {label}
-              </span>
-            ))}
-          </div>
+              {/* Leyenda */}
+              <div className="pointer-events-none absolute bottom-3 left-3 flex flex-wrap items-center gap-3 rounded-lg border border-border bg-background/75 px-3 py-1.5 text-[11px] text-muted-foreground backdrop-blur-sm">
+                {(
+                  [
+                    ["Disponible", "disponible"],
+                    ["Reservada", "reservada"],
+                    ["Vendida", "vendida"],
+                  ] as const
+                ).map(([label, status]) => (
+                  <span key={status} className="flex items-center gap-1.5">
+                    <span className={cn("size-2 rounded-full", STATUS_DOT[status])} />
+                    {label}
+                  </span>
+                ))}
+              </div>
+            </>
+          )}
+
+          {/* Acceso al recorrido 360° de la unidad seleccionada */}
+          {!tour360 && selectedTourUnit && selectedTourUnit.scenes.length > 0 && (
+            <div className="absolute bottom-3 left-1/2 -translate-x-1/2">
+              <Button size="lg" onClick={startTour360} className="shadow-panel shadow-black/30">
+                <Box className="size-4" /> Recorrer esta unidad en 360°
+              </Button>
+            </div>
+          )}
         </div>
 
         {/* Panel de unidad */}
@@ -206,7 +249,13 @@ export function TourViewer({
           </div>
           <div className="min-h-0 flex-1 overflow-y-auto">
             {selectedUnit ? (
-              <UnitTourCard unit={selectedUnit} project={project} onConsult={onConsult} />
+              <UnitTourCard
+                unit={selectedUnit}
+                project={project}
+                onConsult={onConsult}
+                onTour360={startTour360}
+                touring={tour360}
+              />
             ) : (
               <div className="flex h-full min-h-[220px] flex-col items-center justify-center gap-2 px-6 text-center">
                 <Compass className="size-8 text-primary/70" />

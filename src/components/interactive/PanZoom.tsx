@@ -243,6 +243,7 @@ export function PanZoom({
         onPointerMove={pointerMove}
         onPointerUp={pointerUp}
         onPointerCancel={pointerUp}
+        onDragStart={(event) => event.preventDefault()}
         onDoubleClick={(event) => zoomAt(event.clientX, event.clientY, 2)}
       >
         <div

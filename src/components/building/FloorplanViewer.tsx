@@ -51,7 +51,8 @@ export function FloorplanViewer({ open, onOpenChange, unit, onConsult, source = 
             alt={`Plano de la unidad ${unit?.number ?? ""}`}
             width={1280}
             height={960}
-            className="h-auto max-w-none"
+            draggable={false}
+            className="h-auto max-w-none select-none"
           />
         </PanZoom>
 

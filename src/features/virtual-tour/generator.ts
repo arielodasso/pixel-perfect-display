@@ -1,7 +1,14 @@
 import type { Project, Unit, VirtualTourConfig, VirtualTourFloorConfig } from "@/types/domain";
 
 import { autoLayoutPositions } from "./engine";
-import type { VirtualTour, VirtualTourFloor, VirtualTourUnit } from "./types";
+import type {
+  VirtualTour,
+  VirtualTourFloor,
+  VirtualTourScene,
+  VirtualTourSceneHotspot,
+  VirtualTourSceneKind,
+  VirtualTourUnit,
+} from "./types";
 
 /**
  * Genera el `VirtualTour` consumible por el viewer a partir de:
@@ -79,7 +86,75 @@ function toTourUnit(unit: Unit, x: number, y: number): VirtualTourUnit {
     status: unit.status,
     x,
     y,
+    scenes: buildUnitScenes(unit),
   };
   tourUnit.floorplan = unit.floorplan;
   return tourUnit;
+}
+
+/**
+ * Genera el recorrido 360° de una unidad: las ambientes que la componen y
+ * sus hotspots de navegación. Es puramente declarativo — la textura de cada
+ * escena se rasteriza bajo demanda en el viewer (ver `panorama.ts`).
+ */
+function buildUnitScenes(unit: Unit): VirtualTourScene[] {
+  const kinds: VirtualTourSceneKind[] = ["living", "kitchen", "bedroom", "bath"];
+  if (unit.balcony) kinds.push("balcony");
+
+  return kinds.map((kind) => {
+    const sceneId = sceneIdFor(unit.id, kind);
+    const hotspots = kinds
+      .filter((other) => other !== kind)
+      .map((other, index) =>
+        toSceneHotspot(kind, other, sceneIdFor(unit.id, other), index, kinds.length - 1),
+      );
+
+    return {
+      id: sceneId,
+      unitId: unit.id,
+      kind,
+      label: SCENE_LABELS[kind],
+      seed: seedFromString(unit.id),
+      hotspots,
+    };
+  });
+}
+
+function sceneIdFor(unitId: string, kind: VirtualTourSceneKind): string {
+  return `sc_${unitId}_${kind}`;
+}
+
+const SCENE_LABELS: Record<VirtualTourSceneKind, string> = {
+  living: "Living",
+  kitchen: "Cocina",
+  bedroom: "Dormitorio",
+  bath: "Baño",
+  balcony: "Balcón",
+};
+
+/** Distribuye los destinos alrededor de la vista de cada ambiente. */
+function toSceneHotspot(
+  fromKind: VirtualTourSceneKind,
+  toKind: VirtualTourSceneKind,
+  targetSceneId: string,
+  index: number,
+  total: number,
+): VirtualTourSceneHotspot {
+  const spacing = 360 / Math.max(1, total);
+  const base = fromKind === "living" ? -20 : 20;
+  let yaw = base + index * spacing;
+  if (yaw > 180) yaw -= 360;
+  return {
+    id: `hs_${fromKind}_to_${toKind}`,
+    label: SCENE_LABELS[toKind],
+    yaw: Math.round(yaw),
+    pitch: -4,
+    targetSceneId,
+  };
+}
+
+function seedFromString(text: string): number {
+  let hash = 0;
+  for (let i = 0; i < text.length; i++) hash = (hash * 31 + text.charCodeAt(i)) | 0;
+  return Math.abs(hash);
 }

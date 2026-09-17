@@ -1,4 +1,4 @@
-import { ArrowUpRight, GitCompareArrows, MapPin, Ruler, Maximize2 } from "lucide-react";
+import { ArrowUpRight, Box, GitCompareArrows, MapPin, Ruler, Maximize2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -13,10 +13,12 @@ interface Props {
   unit: Unit;
   project: Project;
   onConsult: (unit: Unit) => void;
+  onTour360?: () => void;
+  touring?: boolean;
 }
 
 /** Panel con el detalle comercial de una unidad dentro del Tour Virtual. */
-export function UnitTourCard({ unit, project, onConsult }: Props) {
+export function UnitTourCard({ unit, project, onConsult, onTour360, touring = false }: Props) {
   const compare = useCompare();
   const [planOpen, setPlanOpen] = useState(false);
   const inCompare = compare.includes(unit.code);
@@ -103,7 +105,18 @@ export function UnitTourCard({ unit, project, onConsult }: Props) {
       </div>
 
       <div className="mt-auto space-y-2 p-5">
-        <Button className="w-full" onClick={() => setPlanOpen(true)}>
+        {onTour360 && (
+          <Button
+            className="w-full"
+            size="lg"
+            variant={touring ? "secondary" : "default"}
+            onClick={onTour360}
+          >
+            <Box className="size-4" />
+            {touring ? "Recorriendo en 360°…" : "Recorrer esta unidad en 360°"}
+          </Button>
+        )}
+        <Button className="w-full" variant="outline" onClick={() => setPlanOpen(true)}>
           Ver unidad <Maximize2 className="size-4" />
         </Button>
         <div className="grid grid-cols-2 gap-2">

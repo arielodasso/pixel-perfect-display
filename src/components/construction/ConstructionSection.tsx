@@ -1,4 +1,13 @@
-import { CalendarClock, CheckCircle2, Circle, HardHat, Images, Loader2 } from "lucide-react";
+import { useState } from "react";
+import {
+  CalendarClock,
+  CheckCircle2,
+  ChevronDown,
+  Circle,
+  HardHat,
+  Images,
+  Loader2,
+} from "lucide-react";
 
 import { formatDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -40,6 +49,7 @@ export function ConstructionSection({ project }: { project: Project }) {
   const total = construction.progress;
   const completed = milestones.filter((m) => m.status === "completado").length;
   const inProgress = milestones.filter((m) => m.status === "en progreso").length;
+  const [milestonesExpanded, setMilestonesExpanded] = useState(true);
 
   return (
     <div className="space-y-6">
@@ -116,76 +126,99 @@ export function ConstructionSection({ project }: { project: Project }) {
       </div>
 
       {/* Timeline de hitos */}
-      <ol className="panel relative space-y-0 p-6 sm:p-8">
-        <li className="mb-6 flex items-center gap-2">
-          <p className="eyebrow">Timeline de hitos</p>
-        </li>
-        {milestones.map((milestone, index) => {
-          const style = milestoneStatusStyle[milestone.status];
-          const isLast = index === milestones.length - 1;
-          return (
-            <li key={milestone.id} className="relative flex gap-5 pb-8 last:pb-0">
-              {!isLast && (
-                <span className="absolute left-[7px] top-5 h-full w-px bg-border" aria-hidden />
-              )}
-              <span
-                className={cn(
-                  "relative z-10 mt-0.5 size-3.5 shrink-0 rounded-full border-2 bg-background",
-                  style.dot,
-                )}
-              />
-              <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
-                  <div className="flex items-center gap-2">
-                    <MilestoneIcon status={milestone.status} />
-                    <h3 className="text-base font-medium">{milestone.name}</h3>
-                  </div>
-                  <div className="flex items-center gap-3 text-xs">
-                    <span className={cn("font-medium", style.text)}>{style.label}</span>
-                    <span className="text-muted-foreground">{milestone.date}</span>
-                  </div>
-                </div>
-                {milestone.description && (
-                  <p className="mt-1.5 max-w-[70ch] text-sm leading-relaxed text-muted-foreground">
-                    {milestone.description}
-                  </p>
-                )}
+      <div className="panel p-6 sm:p-8">
+        <button
+          type="button"
+          onClick={() => setMilestonesExpanded((value) => !value)}
+          aria-expanded={milestonesExpanded}
+          aria-controls="milestone-timeline"
+          className="flex w-full items-center justify-between gap-3 text-left"
+        >
+          <span className="flex items-center gap-2">
+            <p className="eyebrow">Timeline de hitos</p>
+          </span>
+          <span className="flex items-center gap-2 text-xs text-muted-foreground">
+            {!milestonesExpanded && (
+              <span className="tabular-nums">
+                {completed}/{milestones.length} completados · {inProgress} en curso
+              </span>
+            )}
+            <ChevronDown
+              className={cn("size-4 transition-transform", milestonesExpanded && "rotate-180")}
+            />
+          </span>
+        </button>
 
-                {milestone.status !== "proximamente" && (
-                  <div className="mt-3 flex items-center gap-3">
-                    <div className="h-1.5 w-full max-w-xs overflow-hidden rounded-full bg-muted">
-                      <div
-                        className={cn(
-                          "h-full rounded-full",
-                          milestone.status === "completado" ? "bg-available" : "bg-primary",
-                        )}
-                        style={{ width: `${milestone.progress}%` }}
-                      />
+        {milestonesExpanded && (
+          <ol id="milestone-timeline" className="mt-6 space-y-0">
+            {milestones.map((milestone, index) => {
+              const style = milestoneStatusStyle[milestone.status];
+              const isLast = index === milestones.length - 1;
+              return (
+                <li key={milestone.id} className="relative flex gap-5 pb-8 last:pb-0">
+                  {!isLast && (
+                    <span className="absolute left-[7px] top-5 h-full w-px bg-border" aria-hidden />
+                  )}
+                  <span
+                    className={cn(
+                      "relative z-10 mt-0.5 size-3.5 shrink-0 rounded-full border-2 bg-background",
+                      style.dot,
+                    )}
+                  />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+                      <div className="flex items-center gap-2">
+                        <MilestoneIcon status={milestone.status} />
+                        <h3 className="text-base font-medium">{milestone.name}</h3>
+                      </div>
+                      <div className="flex items-center gap-3 text-xs">
+                        <span className={cn("font-medium", style.text)}>{style.label}</span>
+                        <span className="text-muted-foreground">{milestone.date}</span>
+                      </div>
                     </div>
-                    <span className="text-xs tabular-nums text-muted-foreground">
-                      {milestone.progress}%
-                    </span>
-                  </div>
-                )}
+                    {milestone.description && (
+                      <p className="mt-1.5 max-w-[70ch] text-sm leading-relaxed text-muted-foreground">
+                        {milestone.description}
+                      </p>
+                    )}
 
-                {milestone.images && milestone.images.length > 0 && (
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    {milestone.images.map((image, imageIndex) => (
-                      <img
-                        key={`${milestone.id}-${imageIndex}`}
-                        src={image}
-                        alt={`${milestone.name} — avance`}
-                        loading="lazy"
-                        className="h-20 w-28 rounded-lg border border-border object-cover"
-                      />
-                    ))}
+                    {milestone.status !== "proximamente" && (
+                      <div className="mt-3 flex items-center gap-3">
+                        <div className="h-1.5 w-full max-w-xs overflow-hidden rounded-full bg-muted">
+                          <div
+                            className={cn(
+                              "h-full rounded-full",
+                              milestone.status === "completado" ? "bg-available" : "bg-primary",
+                            )}
+                            style={{ width: `${milestone.progress}%` }}
+                          />
+                        </div>
+                        <span className="text-xs tabular-nums text-muted-foreground">
+                          {milestone.progress}%
+                        </span>
+                      </div>
+                    )}
+
+                    {milestone.images && milestone.images.length > 0 && (
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {milestone.images.map((image, imageIndex) => (
+                          <img
+                            key={`${milestone.id}-${imageIndex}`}
+                            src={image}
+                            alt={`${milestone.name} — avance`}
+                            loading="lazy"
+                            className="h-20 w-28 rounded-lg border border-border object-cover"
+                          />
+                        ))}
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
-            </li>
-          );
-        })}
-      </ol>
+                </li>
+              );
+            })}
+          </ol>
+        )}
+      </div>
 
       {/* Galería de avance */}
       {construction.gallery.length > 0 && (
