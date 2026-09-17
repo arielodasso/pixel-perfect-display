@@ -177,3 +177,11 @@
 @utility hairline {
   border-top: 1px solid var(--color-border);
 }
+
+@utility no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}

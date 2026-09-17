@@ -1,4 +1,13 @@
-import type { Lead, Organization, Project, Typology, Unit, UnitStatus } from "@/types/domain";
+import type {
+  Lead,
+  Organization,
+  Project,
+  Typology,
+  Unit,
+  UnitStatus,
+  VirtualTourConfig,
+  VirtualTourFloorConfig,
+} from "@/types/domain";
 
 import heroImage from "@/assets/torre-horizonte-hero.jpg";
 import galleryLiving from "@/assets/gallery-living.jpg";
@@ -41,6 +50,12 @@ export const project: Project = {
   province: "Buenos Aires",
   address: "Av. Avellaneda 1240, Tandil",
   coordinates: { lat: -37.3217, lng: -59.1332 },
+  location: {
+    address: "Av. Avellaneda 1240, Tandil",
+    latitude: -37.3217,
+    longitude: -59.1332,
+    googleMapsUrl: "https://www.google.com/maps?q=-37.3217,-59.1332&hl=es",
+  },
   type: "Edificio residencial",
   status: "En preventa",
   developer: organization.name,
@@ -81,13 +96,97 @@ export const project: Project = {
   floors: 8,
   unitsPerFloor: 3,
   milestones: [
-    { id: "m1", name: "Lanzamiento", status: "completado", date: "Mar 2026", progress: 100 },
-    { id: "m2", name: "Excavación", status: "completado", date: "Jul 2026", progress: 100 },
-    { id: "m3", name: "Estructura", status: "en progreso", date: "En curso", progress: 42 },
-    { id: "m4", name: "Cerramientos", status: "proximamente", date: "2027", progress: 0 },
-    { id: "m5", name: "Terminaciones", status: "proximamente", date: "2027", progress: 0 },
-    { id: "m6", name: "Entrega", status: "proximamente", date: "2028", progress: 0 },
+    {
+      id: "m1",
+      name: "Inicio de obra",
+      status: "completado",
+      date: "Mar 2026",
+      progress: 100,
+      description: "Movimiento de suelo, replanteo y cierre del perímetro de la obra.",
+      images: [heroImage],
+    },
+    {
+      id: "m2",
+      name: "Fundaciones",
+      status: "completado",
+      date: "Jul 2026",
+      progress: 100,
+      description: "Plateas y núcleos de ascensor terminados en los tres módulos.",
+      images: [heroImage, galleryAmenities],
+    },
+    {
+      id: "m3",
+      name: "Estructura",
+      status: "en progreso",
+      date: "En curso",
+      progress: 68,
+      description: "Hormigón armado avanzando por encima del nivel 5. Losa y columnas al día con el cronograma.",
+      images: [galleryAmenities],
+    },
+    {
+      id: "m4",
+      name: "Cerramientos",
+      status: "proximamente",
+      date: "2027",
+      progress: 0,
+      description: "Mampostería exterior, aberturas de aluminio con DVH y paneles.",
+    },
+    {
+      id: "m5",
+      name: "Instalaciones",
+      status: "proximamente",
+      date: "2027",
+      progress: 0,
+      description: "Cloacas, electricidad, gas, agua y redes de datos por unidad.",
+    },
+    {
+      id: "m6",
+      name: "Terminaciones",
+      status: "proximamente",
+      date: "2028",
+      progress: 0,
+      description: "Pisos, revoques, pintura, carpintería y herrería interior.",
+    },
+    {
+      id: "m7",
+      name: "Amenities",
+      status: "proximamente",
+      date: "2028",
+      progress: 0,
+      description: "Rooftop con pileta, coworking, gimnasio y parrillas.",
+    },
+    {
+      id: "m8",
+      name: "Entrega",
+      status: "proximamente",
+      date: "2028",
+      progress: 0,
+      description: "Habilitaciones, recepción de unidad y entrega contra posesión.",
+    },
   ],
+  construction: {
+    progress: 68,
+    status: "En obra",
+    updatedAt: "2026-09-12T10:00:00.000Z",
+    estimatedCompletion: "Q1 2028",
+    gallery: [
+      {
+        id: "ob1",
+        url: galleryAmenities,
+        caption: "Estructura — nivel 5 · septiembre 2026",
+      },
+      {
+        id: "ob2",
+        url: heroImage,
+        caption: "Fachada y perímetro de obra",
+      },
+      {
+        id: "ob3",
+        url: floorplan,
+        caption: "Detalle de tabiquería en unidades de 2 ambientes",
+      },
+    ],
+  },
   pois: [
     { id: "p1", name: "Torre Horizonte", category: "Interés", distance: "—", x: 50, y: 50 },
     {
@@ -197,6 +296,74 @@ export const units: Unit[] = Object.entries(typologyPlan).flatMap(([floorKey, pl
     };
   });
 });
+
+/** Posiciones automáticas de unidades dentro del plano de una planta (en %). */
+function tourUnitPositions(count: number, index: number, level: number) {
+  let x = 50;
+  let y = 50;
+  if (count === 1) {
+    x = 50;
+    y = 50;
+  } else if (count === 2) {
+    x = index === 0 ? 38 : 62;
+    y = 50;
+  } else {
+    const dx = ((level * 13) % 11) - 5;
+    const ys = [25, 50, 75];
+    y = ys[index] ?? 50;
+    x = 50 + (index % 2 === 0 ? dx : -dx) * 0.4;
+  }
+  return { x: Math.round(x * 10) / 10, y: Math.round(y * 10) / 10 };
+}
+
+function floorHotspots(level: number): VirtualTourFloorConfig["hotspots"] {
+  if (level === 0) {
+    return [
+      { id: "hs_pb_acceso", label: "Acceso principal", x: 50, y: 50 },
+      { id: "hs_pb_lobby", label: "Lobby y conserjería", x: 50, y: 74 },
+    ];
+  }
+  if (level === 9) {
+    return [
+      { id: "hs_te_pileta", label: "Pileta", x: 32, y: 28 },
+      { id: "hs_te_sum", label: "Parrillas y SUM", x: 68, y: 32 },
+      { id: "hs_te_coworking", label: "Coworking", x: 32, y: 70 },
+      { id: "hs_te_gym", label: "Gimnasio", x: 68, y: 70 },
+    ];
+  }
+  return [{ id: `hs_core_${level}`, label: "Núcleo de ascensores", x: 90, y: 50 }];
+}
+
+function buildTourFloor(level: number, name: string): VirtualTourFloorConfig {
+  const floorUnits = units.filter((u) => u.floor === level);
+  return {
+    id: `tf_${level === 0 ? "pb" : level === 9 ? "terraza" : `piso${level}`}`,
+    name,
+    level,
+    unitPlacements: floorUnits.map((unit, index) => {
+      const position = tourUnitPositions(floorUnits.length, index, level);
+      return { unitId: unit.id, x: position.x, y: position.y };
+    }),
+    hotspots: floorHotspots(level),
+  };
+}
+
+export const virtualTourConfig: VirtualTourConfig = {
+  enabled: true,
+  published: true,
+  title: "Tour virtual de Torre Horizonte",
+  description:
+    "Recorré las plantas del edificio, explorá las unidades disponibles y conocé los espacios comunes como si ya estuviera terminado.",
+  floors: [
+    buildTourFloor(0, "PB"),
+    ...Array.from({ length: 8 }, (_, index) => buildTourFloor(index + 1, `Piso ${index + 1}`)),
+    buildTourFloor(9, "Terraza"),
+  ],
+};
+
+// El tour necesita el dataset de unidades ya inicializado, así que se asigna
+// después de construirlo (mismo valor que ya referencia el store).
+project.virtualTour = virtualTourConfig;
 
 export const leads: Lead[] = [
   {

@@ -5,6 +5,8 @@ import { toast } from "sonner";
 
 import { ChipEditor, Field } from "@/components/admin/fields";
 import { AdminPage } from "@/components/admin/AdminPage";
+import { ConstructionEditor } from "@/components/admin/ConstructionEditor";
+import { VirtualTourAdmin } from "@/components/admin/VirtualTourAdmin";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -68,6 +70,11 @@ function ProjectEditor() {
       amenities: draft.amenities.filter((p) => p.trim().length > 0),
       features: draft.features.filter((p) => p.trim().length > 0),
       milestones: draft.milestones.filter((m) => m.name.trim().length > 0),
+      construction: {
+        ...draft.construction,
+        gallery: draft.construction.gallery.filter((photo) => photo.url.trim().length > 0),
+      },
+      ...(draft.virtualTour ? { virtualTour: draft.virtualTour } : {}),
     });
     window.setTimeout(() => {
       setSaving(false);
@@ -104,11 +111,12 @@ function ProjectEditor() {
       }
     >
       <Tabs defaultValue="ficha" className="mt-2">
-        <TabsList className="mb-6 grid w-full max-w-2xl grid-cols-4">
+        <TabsList className="mb-6 grid w-full max-w-3xl grid-cols-5">
           <TabsTrigger value="ficha">Ficha</TabsTrigger>
           <TabsTrigger value="dotacion">Dotación</TabsTrigger>
           <TabsTrigger value="financiacion">Financiación</TabsTrigger>
           <TabsTrigger value="obra">Obra</TabsTrigger>
+          <TabsTrigger value="tour">Tour virtual</TabsTrigger>
         </TabsList>
 
         <TabsContent value="ficha">
@@ -309,55 +317,71 @@ function ProjectEditor() {
         </TabsContent>
 
         <TabsContent value="obra">
-          <section className="panel overflow-hidden">
-            <div className="flex items-center justify-between border-b border-border px-6 py-4">
-              <div>
-                <p className="eyebrow">Hitos</p>
-                <h2 className="mt-1 text-base font-medium">Avance de obra</h2>
+          <div className="grid gap-6">
+            <ConstructionEditor
+              value={draft.construction}
+              onChange={(next) => setField("construction", next)}
+            />
+            <section className="panel overflow-hidden">
+              <div className="flex items-center justify-between border-b border-border px-6 py-4">
+                <div>
+                  <p className="eyebrow">Hitos</p>
+                  <h2 className="mt-1 text-base font-medium">Avance de obra</h2>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() =>
+                    setDraft((prev) => ({
+                      ...prev,
+                      milestones: [
+                        ...prev.milestones,
+                        {
+                          id: `m_${Date.now()}`,
+                          name: "",
+                          status: "proximamente",
+                          date: "",
+                          progress: 0,
+                        },
+                      ],
+                    }))
+                  }
+                >
+                  Agregar hito
+                </Button>
               </div>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() =>
-                  setDraft((prev) => ({
-                    ...prev,
-                    milestones: [
-                      ...prev.milestones,
-                      {
-                        id: `m_${Date.now()}`,
-                        name: "",
-                        status: "proximamente",
-                        date: "",
-                        progress: 0,
-                      },
-                    ],
-                  }))
-                }
-              >
-                Agregar hito
-              </Button>
-            </div>
-            <ul className="divide-y divide-border">
-              {draft.milestones.map((milestone) => (
-                <MilestoneRow
-                  key={milestone.id}
-                  milestone={milestone}
-                  onChange={(next) =>
-                    setDraft((prev) => ({
-                      ...prev,
-                      milestones: prev.milestones.map((m) => (m.id === milestone.id ? next : m)),
-                    }))
-                  }
-                  onRemove={() =>
-                    setDraft((prev) => ({
-                      ...prev,
-                      milestones: prev.milestones.filter((m) => m.id !== milestone.id),
-                    }))
-                  }
-                />
-              ))}
-            </ul>
-          </section>
+              <ul className="divide-y divide-border">
+                {draft.milestones.map((milestone) => (
+                  <MilestoneRow
+                    key={milestone.id}
+                    milestone={milestone}
+                    onChange={(next) =>
+                      setDraft((prev) => ({
+                        ...prev,
+                        milestones: prev.milestones.map((m) => (m.id === milestone.id ? next : m)),
+                      }))
+                    }
+                    onRemove={() =>
+                      setDraft((prev) => ({
+                        ...prev,
+                        milestones: prev.milestones.filter((m) => m.id !== milestone.id),
+                      }))
+                    }
+                  />
+                ))}
+              </ul>
+            </section>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="tour">
+          <VirtualTourAdmin
+            value={draft.virtualTour}
+            projectName={project.name}
+            projectSlug={project.slug}
+            units={units}
+            onChange={(next) => setField("virtualTour", next)}
+          />
         </TabsContent>
       </Tabs>
 

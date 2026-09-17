@@ -1,9 +1,9 @@
 import { ArrowUpRight, GitCompareArrows, Maximize2 } from "lucide-react";
 import { useState } from "react";
 
+import { FloorplanViewer } from "@/components/building/FloorplanViewer";
 import { UnitStatusBadge } from "@/components/StatusBadge";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { formatArea, formatPrice, ordinalFloor } from "@/lib/format";
 import { trackEvent } from "@/lib/tracking";
 import { cn } from "@/lib/utils";
@@ -126,36 +126,19 @@ export function UnitDetailPanel({
               onClick={() => onCompare?.(unit)}
             >
               <GitCompareArrows className="size-4" />
-              {compareActive ? "Quitar" : "Comparar"}
+              {compareActive ? "Quitar de comparar" : "Agregar a comparar"}
             </Button>
           </div>
         </div>
       )}
 
-      <Dialog open={planOpen} onOpenChange={setPlanOpen}>
-        <DialogContent className="max-w-3xl">
-          <DialogHeader>
-            <DialogTitle>
-              Plano — Unidad {unit.number} · {unit.typology} · {formatArea(unit.area)}
-            </DialogTitle>
-          </DialogHeader>
-          <div className="max-h-[70vh] overflow-auto rounded-lg border border-border bg-white">
-            <img
-              src={unit.floorplan}
-              alt={`Plano ampliado de la unidad ${unit.number}`}
-              width={1280}
-              height={960}
-              className="w-full origin-top-left scale-100 transition-transform duration-300 hover:scale-150"
-            />
-          </div>
-          <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-muted-foreground">
-            <span>Pasá el cursor sobre el plano para ampliar.</span>
-            {variant === "public" && (
-              <Button onClick={() => onConsult?.(unit)}>Consultar por esta unidad</Button>
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
+      <FloorplanViewer
+        open={planOpen}
+        onOpenChange={setPlanOpen}
+        unit={unit}
+        onConsult={onConsult}
+        source="unit"
+      />
     </div>
   );
 }

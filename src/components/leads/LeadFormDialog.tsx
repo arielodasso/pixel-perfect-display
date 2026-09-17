@@ -16,13 +16,15 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { trackEvent } from "@/lib/tracking";
 import { createLead } from "@/services/store";
-import type { Unit } from "@/types/domain";
+import type { LeadSource, Unit } from "@/types/domain";
 
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   units: Unit[];
   presetUnitCode?: string | null;
+  /** Origen del lead; por defecto "showroom". */
+  source?: LeadSource;
   title?: string;
 }
 
@@ -33,6 +35,7 @@ export function LeadFormDialog({
   onOpenChange,
   units,
   presetUnitCode,
+  source = "showroom",
   title = "Solicitar información",
 }: Props) {
   const [sent, setSent] = useState(false);
@@ -68,6 +71,7 @@ export function LeadFormDialog({
       unitCode: form.unitCode === NONE ? null : form.unitCode,
       message: form.message.trim(),
       newsletter: form.newsletter,
+      source,
     });
     trackEvent("lead_created", { leadId: lead.id, unit: lead.unitCode });
     setError(null);

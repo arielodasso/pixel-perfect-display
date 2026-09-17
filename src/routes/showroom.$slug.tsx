@@ -1,18 +1,33 @@
-import { createFileRoute, notFound } from "@tanstack/react-router";
-import { ArrowUpRight, Check, MapPin, MessageCircle, Play, X } from "lucide-react";
+import { createFileRoute, Link, notFound } from "@tanstack/react-router";
+import { ArrowUpRight, Check, MapPin, MessageCircle, Navigation, Play, X } from "lucide-react";
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 
 import { BuildingExplorer } from "@/components/building/BuildingExplorer";
 import { UnitDetailPanel } from "@/components/building/UnitDetailPanel";
+import { ConstructionSection } from "@/components/construction/ConstructionSection";
 import { LeadFormDialog } from "@/components/leads/LeadFormDialog";
 import { UnitStatusBadge } from "@/components/StatusBadge";
 import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
 import { project as projectDemo, typologies } from "@/data/demo";
 import { formatArea, formatPrice } from "@/lib/format";
+import {
+  buildGoogleMapsDirectionsUrl,
+  buildGoogleMapsEmbedUrl,
+  buildGoogleMapsLinkUrl,
+} from "@/lib/maps";
 import { trackEvent } from "@/lib/tracking";
 import { cn } from "@/lib/utils";
-import { unitStats, useOrganization, useProject, useSettings, useUnits } from "@/services/store";
+import {
+  MAX_COMPARE,
+  toggleCompareUnit,
+  unitStats,
+  useCompare,
+  useOrganization,
+  useProject,
+  useSettings,
+  useUnits,
+} from "@/services/store";
 import type { Unit } from "@/types/domain";
 
 export const Route = createFileRoute("/showroom/$slug")({
@@ -46,6 +61,7 @@ const sections = [
   ["comparar", "Comparar"],
   ["financiacion", "Financiación"],
   ["obra", "Avance"],
+  ["tour", "Tour virtual"],
   ["ubicacion", "Ubicación"],
 ] as const;
 
@@ -54,17 +70,17 @@ function Showroom() {
   const project = useProject();
   const organization = useOrganization();
   const settings = useSettings();
+  const compare = useCompare();
   const stats = unitStats(units);
   const [selected, setSelected] = useState<Unit | null>(null);
-  const [compare, setCompare] = useState<string[]>([]);
   const [formOpen, setFormOpen] = useState(false);
   const [presetUnit, setPresetUnit] = useState<string | null>(null);
-  const [tourOpen, setTourOpen] = useState(false);
 
   useEffect(() => {
     trackEvent("showroom_view", { project: project.slug });
   }, [project.slug]);
 
+  const tourEnabled = Boolean(project.virtualTour?.enabled);
   const sectionVisibility: Record<string, boolean> = {
     proyecto: settings.showProject,
     unidades: settings.showUnits,
@@ -72,7 +88,7 @@ function Showroom() {
     financiacion: settings.showFinancing,
     obra: settings.showMilestones,
     ubicacion: settings.showLocation,
-    tour: settings.showTour,
+    tour: settings.showTour && tourEnabled,
   };
   const visibleSections = sections.filter(([id]) => sectionVisibility[id] ?? true);
 
@@ -82,12 +98,23 @@ function Showroom() {
   }
 
   function toggleCompare(unit: Unit) {
-    setCompare((prev) => {
-      if (prev.includes(unit.code)) return prev.filter((c) => c !== unit.code);
-      const next = [...prev, unit.code].slice(-3);
-      trackEvent("unit_compare", { units: next });
-      return next;
+    const result = toggleCompareUnit(unit.code);
+    if (result.isFull) {
+      toast.error(`Podés comparar hasta ${MAX_COMPARE} unidades`, {
+        description: "Quitá una unidad del comparador para sumar esta.",
+      });
+      return;
+    }
+    if (result.removed) {
+      toast.info("Unidad quitada del comparador");
+      return;
+    }
+    toast.success(`${unit.code} agregada al comparador`, {
+      description: "Te llevamos a la comparación.",
     });
+    window.setTimeout(() => {
+      document.getElementById("comparar")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 120);
   }
 
   function openForm(unitCode: string | null) {
@@ -148,9 +175,21 @@ function Showroom() {
             ))}
           </dl>
           <div className="mt-10 flex flex-wrap gap-3">
-            <Button size="lg" onClick={() => openForm(null)}>
-              Solicitar información <ArrowUpRight className="size-4" />
-            </Button>
+            {tourEnabled && settings.showTour ? (
+              <Button size="lg" asChild>
+                <Link
+                  to="/showroom/$slug/tour"
+                  params={{ slug: project.slug }}
+                  onClick={() => trackEvent("virtual_tour_view", { from: "hero" })}
+                >
+                  <Play className="size-4" /> Explorar Tour Virtual
+                </Link>
+              </Button>
+            ) : (
+              <Button size="lg" onClick={() => openForm(null)}>
+                Solicitar información <ArrowUpRight className="size-4" />
+              </Button>
+            )}
             <Button size="lg" variant="outline" asChild>
               <a href="#unidades">Ver unidades</a>
             </Button>
@@ -367,27 +406,10 @@ function Showroom() {
         id="obra"
         eyebrow="Avance de obra"
         title="Cómo va la construcción"
+        description={`Seguimiento actualizado del desarrollo de ${project.name}.`}
         hidden={!settings.showMilestones}
       >
-        <ol className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {project.milestones.map((m) => (
-            <li key={m.id} className="panel p-5">
-              <div className="flex items-center justify-between text-sm">
-                <span className="font-medium">{m.name}</span>
-                <span className="text-xs text-muted-foreground">{m.date}</span>
-              </div>
-              <Progress value={m.progress} className="mt-4" />
-              <p
-                className={cn(
-                  "mt-2 text-xs capitalize",
-                  m.status === "en progreso" ? "text-primary" : "text-muted-foreground",
-                )}
-              >
-                {m.status} · {m.progress}%
-              </p>
-            </li>
-          ))}
-        </ol>
+        <ConstructionSection project={project} />
       </Section>
 
       {/* Ubicación */}
@@ -398,40 +420,52 @@ function Showroom() {
         description="Todo a distancia caminable del centro de Tandil."
         hidden={!settings.showLocation}
       >
-        <div className="grid gap-5 lg:grid-cols-[1fr_0.7fr]">
-          <div className="panel relative aspect-[4/3] overflow-hidden">
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,oklch(0.24_0.01_265),oklch(0.17_0.008_265))]" />
-            {project.pois.map((poi) => (
-              <div
-                key={poi.id}
-                className="absolute -translate-x-1/2 -translate-y-1/2"
-                style={{ left: `${poi.x}%`, top: `${poi.y}%` }}
-              >
-                <span
-                  className={cn(
-                    "flex items-center gap-1.5 rounded-full border border-border bg-popover/90 px-2 py-1 text-[11px] whitespace-nowrap",
-                    poi.distance === "—" && "border-primary/50 text-primary",
-                  )}
-                >
-                  <MapPin className="size-3" />
-                  {poi.name}
-                </span>
-              </div>
-            ))}
+        <div className="grid gap-5 lg:grid-cols-[1.15fr_0.85fr]">
+          <div className="panel overflow-hidden">
+            <iframe
+              title={`Ubicación de ${project.name} en Google Maps`}
+              src={buildGoogleMapsEmbedUrl(project.location)}
+              loading="lazy"
+              referrerPolicy="no-referrer-when-downgrade"
+              allowFullScreen
+              className="aspect-[4/3] w-full lg:aspect-auto lg:h-full lg:min-h-[420px]"
+            />
           </div>
-          <ul className="panel divide-y divide-border">
-            {project.pois
-              .filter((p) => p.distance !== "—")
-              .map((poi) => (
-                <li key={poi.id} className="flex items-center justify-between gap-3 p-4 text-sm">
-                  <span>
-                    {poi.name}
-                    <span className="block text-xs text-muted-foreground">{poi.category}</span>
-                  </span>
-                  <span className="text-xs text-muted-foreground">{poi.distance}</span>
-                </li>
-              ))}
-          </ul>
+          <div className="flex flex-col gap-4">
+            <ul className="panel divide-y divide-border">
+              {project.pois
+                .filter((p) => p.distance !== "—")
+                .map((poi) => (
+                  <li key={poi.id} className="flex items-center justify-between gap-3 p-4 text-sm">
+                    <span>
+                      {poi.name}
+                      <span className="block text-xs text-muted-foreground">{poi.category}</span>
+                    </span>
+                    <span className="text-xs text-muted-foreground">{poi.distance}</span>
+                  </li>
+                ))}
+            </ul>
+            <div className="flex flex-wrap gap-3">
+              <Button variant="outline" asChild>
+                <a
+                  href={buildGoogleMapsDirectionsUrl(project.location)}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  <Navigation className="size-4" /> Cómo llegar
+                </a>
+              </Button>
+              <Button variant="outline" asChild>
+                <a
+                  href={buildGoogleMapsLinkUrl(project.location)}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  <MapPin className="size-4" /> Ver en Google Maps
+                </a>
+              </Button>
+            </div>
+          </div>
         </div>
       </Section>
 
@@ -439,39 +473,33 @@ function Showroom() {
       <Section
         id="tour"
         eyebrow="Tour virtual"
-        title="Recorré una unidad tipo"
-        hidden={!settings.showTour}
+        title="Recorré el edificio por dentro"
+        description={project.virtualTour?.description}
+        hidden={!(settings.showTour && tourEnabled)}
       >
-        <div className="panel flex flex-col items-center gap-4 p-12 text-center">
-          {tourOpen ? (
-            project.virtualTourUrl ? (
-              <iframe
-                src={project.virtualTourUrl}
-                title={`Tour virtual de ${project.name}`}
-                className="aspect-video w-full max-w-3xl rounded-lg border border-border"
-                allow="fullscreen; xr-spatial-tracking; gyroscope; accelerometer"
-                allowFullScreen
-              />
-            ) : (
-              <p className="max-w-[44ch] text-sm text-muted-foreground">
-                El recorrido 360° de {project.name} está en producción. Dejanos tus datos y te
-                avisamos cuando esté publicado.
-              </p>
-            )
-          ) : (
-            <p className="max-w-[44ch] text-sm text-muted-foreground">
-              Vista inmersiva de la unidad de 2 ambientes al frente.
+        <div className="panel relative overflow-hidden">
+          <img
+            src={project.heroImage}
+            alt=""
+            aria-hidden
+            className="absolute inset-0 size-full object-cover opacity-25"
+          />
+          <div className="absolute inset-0 bg-gradient-to-r from-background via-background/90 to-background/40" />
+          <div className="relative flex flex-col items-start gap-6 p-8 sm:p-12">
+            <p className="max-w-[52ch] text-sm leading-relaxed text-muted-foreground">
+              {project.virtualTour?.description ??
+                `Explorá las plantas y unidades de ${project.name} y conocé los espacios comunes.`}
             </p>
-          )}
-          <Button
-            variant="outline"
-            onClick={() => {
-              setTourOpen(true);
-              trackEvent("virtual_tour_view");
-            }}
-          >
-            <Play className="size-4" /> {tourOpen ? "Volver" : "Iniciar recorrido"}
-          </Button>
+            <Button size="lg" asChild>
+              <Link
+                to="/showroom/$slug/tour"
+                params={{ slug: project.slug }}
+                onClick={() => trackEvent("virtual_tour_view", { from: "section" })}
+              >
+                <Play className="size-4" /> Iniciar tour virtual
+              </Link>
+            </Button>
+          </div>
         </div>
       </Section>
 
@@ -526,7 +554,7 @@ function Section({
   id: string;
   eyebrow: string;
   title: string;
-  description?: string;
+  description?: string | undefined;
   hidden?: boolean;
   children: React.ReactNode;
 }) {

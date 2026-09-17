@@ -6,7 +6,16 @@ import {
   project as demoProject,
   units as demoUnits,
 } from "@/data/demo";
-import type { Lead, LeadStatus, Organization, Project, Unit, UnitStatus } from "@/types/domain";
+import type {
+  Lead,
+  LeadSource,
+  LeadStatus,
+  Organization,
+  Project,
+  Unit,
+  UnitStatus,
+} from "@/types/domain";
+import { trackEvent } from "@/lib/tracking";
 
 /**
  * Store en memoria del MVP. Reemplazable por Lovable Cloud sin tocar la UI:
@@ -29,6 +38,8 @@ interface State {
   project: Project;
   organization: Organization;
   settings: ShowroomSettings;
+  /** Códigos de unidades en el comparador (hasta 3). Estado global compartido. */
+  compare: string[];
 }
 
 const defaultSettings: ShowroomSettings = {
@@ -48,6 +59,7 @@ const initialState: State = {
   project: demoProject,
   organization: demoOrganization,
   settings: defaultSettings,
+  compare: [],
 };
 
 let state: State = initialState;
@@ -91,6 +103,10 @@ export function useSettings() {
   return useStore().settings;
 }
 
+export function useCompare() {
+  return useStore().compare;
+}
+
 export function useUnit(code: string | null) {
   const units = useUnits();
   return code ? (units.find((unit) => unit.code === code) ?? null) : null;
@@ -103,6 +119,7 @@ export interface NewLeadInput {
   unitCode: string | null;
   message: string;
   newsletter: boolean;
+  source?: LeadSource;
 }
 
 export function createLead(input: NewLeadInput): Lead {
@@ -112,11 +129,14 @@ export function createLead(input: NewLeadInput): Lead {
     projectName: state.project.name,
     status: "Nuevo",
     createdAt: new Date().toISOString(),
-    source: "Showroom",
+    source: input.source ?? "showroom",
     activity: [
       {
         id: "a1",
-        label: "Formulario enviado desde el showroom",
+        label:
+          input.source === "tour_virtual"
+            ? "Formulario enviado desde el tour virtual"
+            : "Formulario enviado desde el showroom",
         date: new Date().toISOString(),
       },
     ],
@@ -124,6 +144,38 @@ export function createLead(input: NewLeadInput): Lead {
   };
   setState({ ...state, leads: [lead, ...state.leads] });
   return lead;
+}
+
+export const MAX_COMPARE = 3;
+
+export interface CompareResult {
+  added: boolean;
+  removed: boolean;
+  isFull: boolean;
+}
+
+/**
+ * Alterna una unidad en el comparador global.
+ * - Nunca permite superar MAX_COMPARE unidades.
+ * - Si la unidad ya está, la quita.
+ */
+export function toggleCompareUnit(code: string): CompareResult {
+  const current = state.compare;
+  if (current.includes(code)) {
+    setState({ ...state, compare: current.filter((c) => c !== code) });
+    return { added: false, removed: true, isFull: false };
+  }
+  if (current.length >= MAX_COMPARE) {
+    return { added: false, removed: false, isFull: true };
+  }
+  const next = [...current, code];
+  setState({ ...state, compare: next });
+  trackEvent("unit_compare", { units: next });
+  return { added: true, removed: false, isFull: false };
+}
+
+export function clearCompare() {
+  setState({ ...state, compare: [] });
 }
 
 export function updateLeadStatus(id: string, status: LeadStatus) {
@@ -175,9 +227,28 @@ export function resetDemoData() {
   setState({
     leads: demoLeads.map((lead) => ({ ...lead })),
     units: demoUnits.map((unit) => ({ ...unit })),
-    project: { ...demoProject, gallery: demoProject.gallery.map((g) => ({ ...g })) },
+    project: {
+      ...demoProject,
+      gallery: demoProject.gallery.map((g) => ({ ...g })),
+      construction: {
+        ...demoProject.construction,
+        gallery: demoProject.construction.gallery.map((g) => ({ ...g })),
+      },
+      milestones: demoProject.milestones.map((m) => ({ ...m })),
+      virtualTour: demoProject.virtualTour
+        ? {
+            ...demoProject.virtualTour,
+            floors: demoProject.virtualTour.floors.map((f) => ({
+              ...f,
+              unitPlacements: f.unitPlacements.map((p) => ({ ...p })),
+              hotspots: f.hotspots.map((h) => ({ ...h })),
+            })),
+          }
+        : undefined,
+    },
     organization: { ...demoOrganization },
     settings: { ...defaultSettings },
+    compare: [],
   });
 }
 
