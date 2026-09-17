@@ -120,7 +120,8 @@ export const project: Project = {
       status: "en progreso",
       date: "En curso",
       progress: 68,
-      description: "Hormigón armado avanzando por encima del nivel 5. Losa y columnas al día con el cronograma.",
+      description:
+        "Hormigón armado avanzando por encima del nivel 5. Losa y columnas al día con el cronograma.",
       images: [galleryAmenities],
     },
     {

@@ -456,11 +456,7 @@ function Showroom() {
                 </a>
               </Button>
               <Button variant="outline" asChild>
-                <a
-                  href={buildGoogleMapsLinkUrl(project.location)}
-                  target="_blank"
-                  rel="noreferrer"
-                >
+                <a href={buildGoogleMapsLinkUrl(project.location)} target="_blank" rel="noreferrer">
                   <MapPin className="size-4" /> Ver en Google Maps
                 </a>
               </Button>

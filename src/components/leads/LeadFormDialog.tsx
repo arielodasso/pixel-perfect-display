@@ -167,9 +167,7 @@ export function LeadFormDialog({
               <label className="flex items-start gap-3 text-sm text-muted-foreground">
                 <Checkbox
                   checked={form.newsletter}
-                  onCheckedChange={(checked) =>
-                    setForm({ ...form, newsletter: checked === true })
-                  }
+                  onCheckedChange={(checked) => setForm({ ...form, newsletter: checked === true })}
                 />
                 Quiero recibir información del proyecto.
               </label>

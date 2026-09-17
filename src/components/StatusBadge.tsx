@@ -16,13 +16,7 @@ const leadStyles: Record<LeadStatus, string> = {
   Cerrado: "bg-muted text-muted-foreground border-border",
 };
 
-export function UnitStatusBadge({
-  status,
-  className,
-}: {
-  status: UnitStatus;
-  className?: string;
-}) {
+export function UnitStatusBadge({ status, className }: { status: UnitStatus; className?: string }) {
   return (
     <span
       className={cn(
@@ -37,13 +31,7 @@ export function UnitStatusBadge({
   );
 }
 
-export function LeadStatusBadge({
-  status,
-  className,
-}: {
-  status: LeadStatus;
-  className?: string;
-}) {
+export function LeadStatusBadge({ status, className }: { status: LeadStatus; className?: string }) {
   return (
     <span
       className={cn(

@@ -6,13 +6,7 @@ export type LeadSource = (typeof LEAD_SOURCES)[number] | (string & {});
 
 export type ProjectStatus = "En preventa" | "En obra" | "Terminado" | "Borrador";
 
-export type LeadStatus =
-  | "Nuevo"
-  | "Contactado"
-  | "Calificado"
-  | "Visita"
-  | "Reserva"
-  | "Cerrado";
+export type LeadStatus = "Nuevo" | "Contactado" | "Calificado" | "Visita" | "Reserva" | "Cerrado";
 
 export interface Organization {
   id: string;

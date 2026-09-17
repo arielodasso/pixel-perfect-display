@@ -64,7 +64,8 @@
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
 
-  --shadow-glow: 0 0 0 1px oklch(0.945 0.215 108.5 / 25%), 0 18px 60px -20px oklch(0.945 0.215 108.5 / 30%);
+  --shadow-glow:
+    0 0 0 1px oklch(0.945 0.215 108.5 / 25%), 0 18px 60px -20px oklch(0.945 0.215 108.5 / 30%);
   --shadow-panel: 0 30px 80px -40px oklch(0 0 0 / 80%);
 }
 
