@@ -64,6 +64,7 @@ export function PanZoom({
 
   const pointers = useRef<Map<number, Point>>(new Map());
   const dragStart = useRef<{ px: number; py: number; x: number; y: number } | null>(null);
+  const movedRef = useRef(false);
   const pinchStart = useRef<{
     dist: number;
     scale: number;
@@ -165,6 +166,7 @@ export function PanZoom({
 
   function pointerDown(event: ReactPointerEvent<HTMLDivElement>) {
     event.currentTarget.setPointerCapture(event.pointerId);
+    movedRef.current = false;
     const point = { x: event.clientX, y: event.clientY };
     pointers.current.set(event.pointerId, point);
     if (pointers.current.size === 1) {
@@ -215,6 +217,9 @@ export function PanZoom({
 
     if (pointers.current.size === 1 && dragStart.current) {
       const start = dragStart.current;
+      if (Math.abs(point.x - start.px) + Math.abs(point.y - start.py) > 5) {
+        movedRef.current = true;
+      }
       apply({
         scale: transform.scale,
         x: start.x + (point.x - start.px),
@@ -224,6 +229,10 @@ export function PanZoom({
   }
 
   function pointerUp(event: ReactPointerEvent<HTMLDivElement>) {
+    // Liberamos el pointer capture para que el `click` posterior llegue al
+    // elemento real bajo el puntero (unidades clicables de la planta).
+    const el = event.currentTarget;
+    if (el.hasPointerCapture(event.pointerId)) el.releasePointerCapture(event.pointerId);
     pointers.current.delete(event.pointerId);
     if (pointers.current.size < 2) pinchStart.current = null;
     if (pointers.current.size === 0) dragStart.current = null;
@@ -244,7 +253,15 @@ export function PanZoom({
         onPointerUp={pointerUp}
         onPointerCancel={pointerUp}
         onDragStart={(event) => event.preventDefault()}
-        onDoubleClick={(event) => zoomAt(event.clientX, event.clientY, 2)}
+        onClickCapture={(event) => {
+          // Tras un arrastre real (pan/zoom) no debe generarse selección sobre
+          // lo que quede bajo el puntero al soltar.
+          if (movedRef.current) {
+            movedRef.current = false;
+            event.preventDefault();
+            event.stopPropagation();
+          }
+        }}
       >
         <div
           ref={innerRef}

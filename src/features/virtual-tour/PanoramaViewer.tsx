@@ -62,6 +62,8 @@ export function PanoramaViewer({
   const pinchStartRef = useRef<{ dist: number; fov: number } | null>(null);
   const activeSceneRef = useRef<VirtualTourScene | undefined>(undefined);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const movedRef = useRef(false);
+  const dragMoveRef = useRef(0);
 
   const activeScene = scenes.find((scene) => scene.id === activeSceneId) ?? scenes[0];
   activeSceneRef.current = activeScene;
@@ -192,6 +194,8 @@ export function PanoramaViewer({
   function onPointerDown(event: ReactPointerEvent<HTMLDivElement>) {
     autoRotateRef.current = false;
     event.currentTarget.setPointerCapture(event.pointerId);
+    movedRef.current = false;
+    dragMoveRef.current = 0;
     pointersRef.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
     if (pointersRef.current.size === 2) {
       const values = [...pointersRef.current.values()];
@@ -225,12 +229,18 @@ export function PanoramaViewer({
     if (pointers.size === 1) {
       const dx = current.x - prev.x;
       const dy = current.y - prev.y;
+      dragMoveRef.current += Math.abs(dx) + Math.abs(dy);
+      if (dragMoveRef.current > 6) movedRef.current = true;
       yawRef.current -= dx * DRAG_FACTOR;
       pitchRef.current = clamp(pitchRef.current - dy * DRAG_FACTOR, -1.35, 1.35);
     }
   }
 
   function endPointer(event: ReactPointerEvent<HTMLDivElement>) {
+    // Liberamos el pointer capture para que el click posterior alcance los
+    // hotspots/controles bajo el puntero.
+    const el = event.currentTarget;
+    if (el.hasPointerCapture(event.pointerId)) el.releasePointerCapture(event.pointerId);
     pointersRef.current.delete(event.pointerId);
     if (pointersRef.current.size < 2) pinchStartRef.current = null;
   }
@@ -311,6 +321,14 @@ export function PanoramaViewer({
       onPointerUp={endPointer}
       onPointerCancel={endPointer}
       onWheel={onWheel}
+      onClickCapture={(event) => {
+        if (movedRef.current) {
+          movedRef.current = false;
+          dragMoveRef.current = 0;
+          event.preventDefault();
+          event.stopPropagation();
+        }
+      }}
     >
       <div ref={hostRef} className="absolute inset-0" />
 
