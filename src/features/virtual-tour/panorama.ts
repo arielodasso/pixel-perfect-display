@@ -24,7 +24,7 @@ export const SCENE_META: Record<VirtualTourSceneKind, { label: string; blurb: st
 };
 
 /** Seudo-random determinístico (mulberry32). */
-function mulberry32(seed: number) {
+export function mulberry32(seed: number) {
   let a = seed >>> 0;
   return () => {
     a |= 0;
@@ -35,7 +35,7 @@ function mulberry32(seed: number) {
   };
 }
 
-function hashCode(text: string): number {
+export function hashCode(text: string): number {
   let hash = 5381;
   for (let i = 0; i < text.length; i++) hash = (hash * 33) ^ text.charCodeAt(i);
   return hash >>> 0;
@@ -62,7 +62,7 @@ interface Palette {
   warm: string;
 }
 
-const PALETTES: Record<VirtualTourSceneKind, Palette> = {
+export const PALETTES: Record<VirtualTourSceneKind, Palette> = {
   living: {
     wall: "#3b4152",
     accent: "#b0524a",

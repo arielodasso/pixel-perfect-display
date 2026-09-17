@@ -24,6 +24,8 @@ interface Props {
   onConsult: (unit: Unit | null) => void;
   /** Vista previa (tour aún no publicado). */
   preview?: boolean;
+  /** Embebido dentro del shell (ocupa el 100% del contenedor). */
+  embedded?: boolean;
 }
 
 const STATUS_DOT: Record<Unit["status"], string> = {
@@ -40,6 +42,7 @@ export function TourViewer({
   units,
   onConsult,
   preview = false,
+  embedded = false,
 }: Props) {
   const compare = useCompare();
   const unitByCode = useMemo(() => new Map(units.map((unit) => [unit.code, unit])), [units]);
@@ -105,15 +108,17 @@ export function TourViewer({
   }
 
   return (
-    <div className="flex h-[100dvh] flex-col overflow-hidden">
+    <div className={cn("flex flex-col overflow-hidden", embedded ? "h-full" : "h-[100dvh]")}>
       {/* Header */}
       <header className="z-30 shrink-0 border-b border-border bg-background/80 backdrop-blur">
         <div className="mx-auto flex w-full max-w-[1500px] items-center gap-3 px-4 py-3">
-          <Button variant="ghost" size="sm" asChild>
-            <Link to="/showroom/$slug" params={{ slug: project.slug }}>
-              <ArrowLeft className="size-4" /> Volver
-            </Link>
-          </Button>
+          {!embedded && (
+            <Button variant="ghost" size="sm" asChild>
+              <Link to="/showroom/$slug" params={{ slug: project.slug }}>
+                <ArrowLeft className="size-4" /> Volver
+              </Link>
+            </Button>
+          )}
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-medium">{project.name}</p>
             <p className="truncate text-xs text-muted-foreground">Tour virtual · {tour.title}</p>
