@@ -1,11 +1,4 @@
-import type {
-  Lead,
-  Organization,
-  Project,
-  Typology,
-  Unit,
-  UnitStatus,
-} from "@/types/domain";
+import type { Lead, Organization, Project, Typology, Unit, UnitStatus } from "@/types/domain";
 
 import heroImage from "@/assets/torre-horizonte-hero.jpg";
 import galleryLiving from "@/assets/gallery-living.jpg";
@@ -97,13 +90,34 @@ export const project: Project = {
   ],
   pois: [
     { id: "p1", name: "Torre Horizonte", category: "Interés", distance: "—", x: 50, y: 50 },
-    { id: "p2", name: "Parada Av. Avellaneda", category: "Transporte", distance: "120 m", x: 38, y: 40 },
-    { id: "p3", name: "Terminal de ómnibus", category: "Transporte", distance: "1,4 km", x: 20, y: 72 },
+    {
+      id: "p2",
+      name: "Parada Av. Avellaneda",
+      category: "Transporte",
+      distance: "120 m",
+      x: 38,
+      y: 40,
+    },
+    {
+      id: "p3",
+      name: "Terminal de ómnibus",
+      category: "Transporte",
+      distance: "1,4 km",
+      x: 20,
+      y: 72,
+    },
     { id: "p4", name: "Supermercado", category: "Comercios", distance: "300 m", x: 64, y: 36 },
     { id: "p5", name: "Paseo del Centro", category: "Comercios", distance: "800 m", x: 72, y: 62 },
     { id: "p6", name: "Colegio San José", category: "Colegios", distance: "550 m", x: 34, y: 66 },
     { id: "p7", name: "UNICEN", category: "Colegios", distance: "2,1 km", x: 78, y: 22 },
-    { id: "p8", name: "Parque Independencia", category: "Interés", distance: "1,1 km", x: 26, y: 24 },
+    {
+      id: "p8",
+      name: "Parque Independencia",
+      category: "Interés",
+      distance: "1,1 km",
+      x: 26,
+      y: 24,
+    },
   ],
   visits: 3184,
   leads: 46,
@@ -172,7 +186,7 @@ export const units: Unit[] = Object.entries(typologyPlan).flatMap(([floorKey, pl
       typology: typology.name,
       area,
       rooms: typology.rooms,
-      orientation: orientations[index % orientations.length],
+      orientation: orientations[index % orientations.length] ?? "Frente / Norte",
       price: priceFor(area, floor, status),
       currency: "USD" as const,
       status,
@@ -313,10 +327,25 @@ export const leads: Lead[] = [
 ];
 
 export const recentActivity = [
-  { id: "act1", label: "Nuevo lead interesado en la Unidad 603", time: "Hace 12 min", kind: "lead" as const },
-  { id: "act2", label: "Unidad 201 marcada como reservada", time: "Hace 2 h", kind: "unit" as const },
+  {
+    id: "act1",
+    label: "Nuevo lead interesado en la Unidad 603",
+    time: "Hace 12 min",
+    kind: "lead" as const,
+  },
+  {
+    id: "act2",
+    label: "Unidad 201 marcada como reservada",
+    time: "Hace 2 h",
+    kind: "unit" as const,
+  },
   { id: "act3", label: "Nuevo visitante en el showroom", time: "Hace 3 h", kind: "visit" as const },
-  { id: "act4", label: "Lead solicitó información de financiación", time: "Hace 5 h", kind: "lead" as const },
+  {
+    id: "act4",
+    label: "Lead solicitó información de financiación",
+    time: "Hace 5 h",
+    kind: "lead" as const,
+  },
   { id: "act5", label: "Unidad 302 fue la más vista del día", time: "Ayer", kind: "unit" as const },
 ];
 

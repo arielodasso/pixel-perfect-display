@@ -12,8 +12,13 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
+import { Route as AdminAnalyticsRouteImport } from './routes/admin.analytics'
+import { Route as AdminConfiguracionRouteImport } from './routes/admin.configuracion'
+import { Route as AdminLeadsRouteImport } from './routes/admin.leads'
+import { Route as AdminUnidadesRouteImport } from './routes/admin.unidades'
 import { Route as ShowroomSlugRouteImport } from './routes/showroom.$slug'
 import { Route as AdminProyectosIndexRouteImport } from './routes/admin.proyectos.index'
+import { Route as AdminProyectosSlugRouteImport } from './routes/admin.proyectos.$slug'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -30,6 +35,26 @@ const AdminIndexRoute = AdminIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminAnalyticsRoute = AdminAnalyticsRouteImport.update({
+  id: '/analytics',
+  path: '/analytics',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminConfiguracionRoute = AdminConfiguracionRouteImport.update({
+  id: '/configuracion',
+  path: '/configuracion',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminLeadsRoute = AdminLeadsRouteImport.update({
+  id: '/leads',
+  path: '/leads',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminUnidadesRoute = AdminUnidadesRouteImport.update({
+  id: '/unidades',
+  path: '/unidades',
+  getParentRoute: () => AdminRoute,
+} as any)
 const ShowroomSlugRoute = ShowroomSlugRouteImport.update({
   id: '/showroom/$slug',
   path: '/showroom/$slug',
@@ -40,40 +65,83 @@ const AdminProyectosIndexRoute = AdminProyectosIndexRouteImport.update({
   path: '/proyectos/',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminProyectosSlugRoute = AdminProyectosSlugRouteImport.update({
+  id: '/proyectos/$slug',
+  path: '/proyectos/$slug',
+  getParentRoute: () => AdminRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
+  '/admin/analytics': typeof AdminAnalyticsRoute
+  '/admin/configuracion': typeof AdminConfiguracionRoute
+  '/admin/leads': typeof AdminLeadsRoute
+  '/admin/unidades': typeof AdminUnidadesRoute
   '/showroom/$slug': typeof ShowroomSlugRoute
   '/admin/': typeof AdminIndexRoute
+  '/admin/proyectos/$slug': typeof AdminProyectosSlugRoute
   '/admin/proyectos/': typeof AdminProyectosIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/admin/analytics': typeof AdminAnalyticsRoute
+  '/admin/configuracion': typeof AdminConfiguracionRoute
+  '/admin/leads': typeof AdminLeadsRoute
+  '/admin/unidades': typeof AdminUnidadesRoute
   '/showroom/$slug': typeof ShowroomSlugRoute
   '/admin': typeof AdminIndexRoute
+  '/admin/proyectos/$slug': typeof AdminProyectosSlugRoute
   '/admin/proyectos': typeof AdminProyectosIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
+  '/admin/analytics': typeof AdminAnalyticsRoute
+  '/admin/configuracion': typeof AdminConfiguracionRoute
+  '/admin/leads': typeof AdminLeadsRoute
+  '/admin/unidades': typeof AdminUnidadesRoute
   '/showroom/$slug': typeof ShowroomSlugRoute
   '/admin/': typeof AdminIndexRoute
+  '/admin/proyectos/$slug': typeof AdminProyectosSlugRoute
   '/admin/proyectos/': typeof AdminProyectosIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    '/' | '/admin' | '/showroom/$slug' | '/admin/' | '/admin/proyectos/'
+    | '/'
+    | '/admin'
+    | '/admin/analytics'
+    | '/admin/configuracion'
+    | '/admin/leads'
+    | '/admin/unidades'
+    | '/showroom/$slug'
+    | '/admin/'
+    | '/admin/proyectos/$slug'
+    | '/admin/proyectos/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/showroom/$slug' | '/admin' | '/admin/proyectos'
+  to:
+    | '/'
+    | '/admin/analytics'
+    | '/admin/configuracion'
+    | '/admin/leads'
+    | '/admin/unidades'
+    | '/showroom/$slug'
+    | '/admin'
+    | '/admin/proyectos/$slug'
+    | '/admin/proyectos'
   id:
     | '__root__'
     | '/'
     | '/admin'
+    | '/admin/analytics'
+    | '/admin/configuracion'
+    | '/admin/leads'
+    | '/admin/unidades'
     | '/showroom/$slug'
     | '/admin/'
+    | '/admin/proyectos/$slug'
     | '/admin/proyectos/'
   fileRoutesById: FileRoutesById
 }
@@ -106,6 +174,34 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminIndexRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/analytics': {
+      id: '/admin/analytics'
+      path: '/analytics'
+      fullPath: '/admin/analytics'
+      preLoaderRoute: typeof AdminAnalyticsRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/configuracion': {
+      id: '/admin/configuracion'
+      path: '/configuracion'
+      fullPath: '/admin/configuracion'
+      preLoaderRoute: typeof AdminConfiguracionRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/leads': {
+      id: '/admin/leads'
+      path: '/leads'
+      fullPath: '/admin/leads'
+      preLoaderRoute: typeof AdminLeadsRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/unidades': {
+      id: '/admin/unidades'
+      path: '/unidades'
+      fullPath: '/admin/unidades'
+      preLoaderRoute: typeof AdminUnidadesRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/showroom/$slug': {
       id: '/showroom/$slug'
       path: '/showroom/$slug'
@@ -120,16 +216,33 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminProyectosIndexRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/proyectos/$slug': {
+      id: '/admin/proyectos/$slug'
+      path: '/proyectos/$slug'
+      fullPath: '/admin/proyectos/$slug'
+      preLoaderRoute: typeof AdminProyectosSlugRouteImport
+      parentRoute: typeof AdminRoute
+    }
   }
 }
 
 interface AdminRouteChildren {
+  AdminAnalyticsRoute: typeof AdminAnalyticsRoute
+  AdminConfiguracionRoute: typeof AdminConfiguracionRoute
+  AdminLeadsRoute: typeof AdminLeadsRoute
+  AdminUnidadesRoute: typeof AdminUnidadesRoute
   AdminIndexRoute: typeof AdminIndexRoute
+  AdminProyectosSlugRoute: typeof AdminProyectosSlugRoute
   AdminProyectosIndexRoute: typeof AdminProyectosIndexRoute
 }
 
 const AdminRouteChildren: AdminRouteChildren = {
+  AdminAnalyticsRoute: AdminAnalyticsRoute,
+  AdminConfiguracionRoute: AdminConfiguracionRoute,
+  AdminLeadsRoute: AdminLeadsRoute,
+  AdminUnidadesRoute: AdminUnidadesRoute,
   AdminIndexRoute: AdminIndexRoute,
+  AdminProyectosSlugRoute: AdminProyectosSlugRoute,
   AdminProyectosIndexRoute: AdminProyectosIndexRoute,
 }
 

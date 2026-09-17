@@ -4,9 +4,9 @@ import { Building2, Eye, TrendingUp, Users } from "lucide-react";
 import { AdminPage, StatCard } from "@/components/admin/AdminPage";
 import { LeadStatusBadge } from "@/components/StatusBadge";
 import { Button } from "@/components/ui/button";
-import { analyticsSummary, project, recentActivity, visitsSeries } from "@/data/demo";
+import { analyticsSummary, recentActivity, visitsSeries } from "@/data/demo";
 import { formatDate, formatNumber, formatPrice } from "@/lib/format";
-import { unitStats, useLeads, useUnits } from "@/services/store";
+import { unitStats, useLeads, useProject, useUnits } from "@/services/store";
 
 export const Route = createFileRoute("/admin/")({
   component: AdminOverview,
@@ -21,6 +21,7 @@ const activityIcon = {
 function AdminOverview() {
   const units = useUnits();
   const leads = useLeads();
+  const project = useProject();
   const stats = unitStats(units);
   const maxVisits = Math.max(...visitsSeries.map((d) => d.visits));
 
@@ -109,7 +110,10 @@ function AdminOverview() {
         </div>
         <ul className="divide-y divide-border">
           {leads.slice(0, 5).map((lead) => (
-            <li key={lead.id} className="flex flex-wrap items-center justify-between gap-3 px-5 py-4">
+            <li
+              key={lead.id}
+              className="flex flex-wrap items-center justify-between gap-3 px-5 py-4"
+            >
               <div className="min-w-0">
                 <p className="truncate text-sm font-medium">{lead.name}</p>
                 <p className="truncate text-xs text-muted-foreground">

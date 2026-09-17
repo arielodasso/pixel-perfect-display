@@ -3,9 +3,8 @@ import { ArrowUpRight, Eye, Users } from "lucide-react";
 
 import { AdminPage } from "@/components/admin/AdminPage";
 import { Button } from "@/components/ui/button";
-import { project } from "@/data/demo";
 import { formatNumber, formatPrice } from "@/lib/format";
-import { unitStats, useUnits } from "@/services/store";
+import { unitStats, useProject, useUnits } from "@/services/store";
 
 export const Route = createFileRoute("/admin/proyectos/")({
   component: AdminProjects,
@@ -13,6 +12,7 @@ export const Route = createFileRoute("/admin/proyectos/")({
 
 function AdminProjects() {
   const units = useUnits();
+  const project = useProject();
   const stats = unitStats(units);
 
   return (

@@ -1,12 +1,5 @@
 import { createFileRoute, notFound } from "@tanstack/react-router";
-import {
-  ArrowUpRight,
-  Check,
-  MapPin,
-  MessageCircle,
-  Play,
-  X,
-} from "lucide-react";
+import { ArrowUpRight, Check, MapPin, MessageCircle, Play, X } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { BuildingExplorer } from "@/components/building/BuildingExplorer";
@@ -15,16 +8,16 @@ import { LeadFormDialog } from "@/components/leads/LeadFormDialog";
 import { UnitStatusBadge } from "@/components/StatusBadge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { organization, project, typologies } from "@/data/demo";
+import { project as projectDemo, typologies } from "@/data/demo";
 import { formatArea, formatPrice } from "@/lib/format";
 import { trackEvent } from "@/lib/tracking";
 import { cn } from "@/lib/utils";
-import { unitStats, useUnits } from "@/services/store";
+import { unitStats, useOrganization, useProject, useSettings, useUnits } from "@/services/store";
 import type { Unit } from "@/types/domain";
 
 export const Route = createFileRoute("/showroom/$slug")({
   loader: ({ params }) => {
-    if (params.slug !== project.slug) throw notFound();
+    if (params.slug !== projectDemo.slug) throw notFound();
     return { slug: params.slug };
   },
   head: ({ loaderData }) => {
@@ -33,8 +26,8 @@ export const Route = createFileRoute("/showroom/$slug")({
         meta: [{ title: "Showroom no encontrado" }, { name: "robots", content: "noindex" }],
       };
     }
-    const title = `${project.name} — ${project.city} | Showroom digital`;
-    const description = `${project.tagline} ${project.floors} pisos, unidades de 1 a 3 ambientes desde ${formatPrice(project.priceFrom, project.currency)}.`;
+    const title = `${projectDemo.name} — ${projectDemo.city} | Showroom digital`;
+    const description = `${projectDemo.tagline} ${projectDemo.floors} pisos, unidades de 1 a 3 ambientes desde ${formatPrice(projectDemo.priceFrom, projectDemo.currency)}.`;
     return {
       meta: [
         { title },
@@ -58,6 +51,9 @@ const sections = [
 
 function Showroom() {
   const units = useUnits();
+  const project = useProject();
+  const organization = useOrganization();
+  const settings = useSettings();
   const stats = unitStats(units);
   const [selected, setSelected] = useState<Unit | null>(null);
   const [compare, setCompare] = useState<string[]>([]);
@@ -67,7 +63,18 @@ function Showroom() {
 
   useEffect(() => {
     trackEvent("showroom_view", { project: project.slug });
-  }, []);
+  }, [project.slug]);
+
+  const sectionVisibility: Record<string, boolean> = {
+    proyecto: settings.showProject,
+    unidades: settings.showUnits,
+    comparar: settings.showCompare,
+    financiacion: settings.showFinancing,
+    obra: settings.showMilestones,
+    ubicacion: settings.showLocation,
+    tour: settings.showTour,
+  };
+  const visibleSections = sections.filter(([id]) => sectionVisibility[id] ?? true);
 
   function selectUnit(unit: Unit) {
     setSelected(unit);
@@ -101,7 +108,7 @@ function Showroom() {
             <p className="truncate text-xs text-muted-foreground">{organization.name}</p>
           </div>
           <nav className="hidden items-center gap-5 text-xs text-muted-foreground lg:flex">
-            {sections.map(([id, label]) => (
+            {visibleSections.map(([id, label]) => (
               <a key={id} href={`#${id}`} className="transition-colors hover:text-foreground">
                 {label}
               </a>
@@ -152,12 +159,15 @@ function Showroom() {
       </section>
 
       {/* Proyecto */}
-      <Section id="proyecto" eyebrow="El proyecto" title="Arquitectura pensada para Tandil">
+      <Section
+        id="proyecto"
+        eyebrow="El proyecto"
+        title="Arquitectura pensada para Tandil"
+        hidden={!settings.showProject}
+      >
         <div className="grid gap-10 lg:grid-cols-[1.1fr_0.9fr]">
           <div>
-            <p className="text-base leading-relaxed text-muted-foreground">
-              {project.description}
-            </p>
+            <p className="text-base leading-relaxed text-muted-foreground">{project.description}</p>
             <div className="mt-8 grid gap-8 sm:grid-cols-2">
               <div>
                 <p className="eyebrow">Amenities</p>
@@ -220,6 +230,7 @@ function Showroom() {
         eyebrow="Disponibilidad"
         title="Elegí tu unidad"
         description={`${stats.available} disponibles · ${stats.reserved} reservadas · ${stats.sold} vendidas`}
+        hidden={!settings.showUnits}
       >
         <div className="grid gap-5 lg:grid-cols-[1.3fr_0.7fr]">
           <BuildingExplorer
@@ -243,6 +254,7 @@ function Showroom() {
         eyebrow="Comparador"
         title="Compará hasta tres unidades"
         description="Sumá unidades desde el panel de detalle para verlas lado a lado."
+        hidden={!settings.showCompare}
       >
         {compareUnits.length === 0 ? (
           <div className="panel p-10 text-center text-sm text-muted-foreground">
@@ -313,7 +325,12 @@ function Showroom() {
       </Section>
 
       {/* Financiación */}
-      <Section id="financiacion" eyebrow="Condiciones" title="Financiación directa">
+      <Section
+        id="financiacion"
+        eyebrow="Condiciones"
+        title="Financiación directa"
+        hidden={!settings.showFinancing}
+      >
         <div className="grid gap-5 lg:grid-cols-3">
           {[
             ["Anticipo", project.financing.advance],
@@ -346,7 +363,12 @@ function Showroom() {
       </Section>
 
       {/* Obra */}
-      <Section id="obra" eyebrow="Avance de obra" title="Cómo va la construcción">
+      <Section
+        id="obra"
+        eyebrow="Avance de obra"
+        title="Cómo va la construcción"
+        hidden={!settings.showMilestones}
+      >
         <ol className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {project.milestones.map((m) => (
             <li key={m.id} className="panel p-5">
@@ -374,6 +396,7 @@ function Showroom() {
         eyebrow="Ubicación"
         title={project.address}
         description="Todo a distancia caminable del centro de Tandil."
+        hidden={!settings.showLocation}
       >
         <div className="grid gap-5 lg:grid-cols-[1fr_0.7fr]">
           <div className="panel relative aspect-[4/3] overflow-hidden">
@@ -413,13 +436,28 @@ function Showroom() {
       </Section>
 
       {/* Tour virtual */}
-      <Section id="tour" eyebrow="Tour virtual" title="Recorré una unidad tipo">
+      <Section
+        id="tour"
+        eyebrow="Tour virtual"
+        title="Recorré una unidad tipo"
+        hidden={!settings.showTour}
+      >
         <div className="panel flex flex-col items-center gap-4 p-12 text-center">
           {tourOpen ? (
-            <p className="max-w-[44ch] text-sm text-muted-foreground">
-              El recorrido 360° de {project.name} está en producción. Dejanos tus datos y te
-              avisamos cuando esté publicado.
-            </p>
+            project.virtualTourUrl ? (
+              <iframe
+                src={project.virtualTourUrl}
+                title={`Tour virtual de ${project.name}`}
+                className="aspect-video w-full max-w-3xl rounded-lg border border-border"
+                allow="fullscreen; xr-spatial-tracking; gyroscope; accelerometer"
+                allowFullScreen
+              />
+            ) : (
+              <p className="max-w-[44ch] text-sm text-muted-foreground">
+                El recorrido 360° de {project.name} está en producción. Dejanos tus datos y te
+                avisamos cuando esté publicado.
+              </p>
+            )
           ) : (
             <p className="max-w-[44ch] text-sm text-muted-foreground">
               Vista inmersiva de la unidad de 2 ambientes al frente.
@@ -432,7 +470,7 @@ function Showroom() {
               trackEvent("virtual_tour_view");
             }}
           >
-            <Play className="size-4" /> Iniciar recorrido
+            <Play className="size-4" /> {tourOpen ? "Volver" : "Iniciar recorrido"}
           </Button>
         </div>
       </Section>
@@ -450,16 +488,18 @@ function Showroom() {
             <Button size="lg" onClick={() => openForm(selected?.code ?? null)}>
               Solicitar información
             </Button>
-            <Button size="lg" variant="outline" asChild>
-              <a
-                href={`https://wa.me/${organization.whatsapp}`}
-                target="_blank"
-                rel="noreferrer"
-                onClick={() => trackEvent("whatsapp_click")}
-              >
-                <MessageCircle className="size-4" /> WhatsApp
-              </a>
-            </Button>
+            {settings.showWhatsappCta && (
+              <Button size="lg" variant="outline" asChild>
+                <a
+                  href={`https://wa.me/${organization.whatsapp}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  onClick={() => trackEvent("whatsapp_click")}
+                >
+                  <MessageCircle className="size-4" /> WhatsApp
+                </a>
+              </Button>
+            )}
           </div>
         </div>
       </section>
@@ -480,14 +520,17 @@ function Section({
   eyebrow,
   title,
   description,
+  hidden = false,
   children,
 }: {
   id: string;
   eyebrow: string;
   title: string;
   description?: string;
+  hidden?: boolean;
   children: React.ReactNode;
 }) {
+  if (hidden) return null;
   return (
     <section id={id} className="mx-auto max-w-7xl scroll-mt-20 px-5 py-16 sm:py-20">
       <header className="mb-10">

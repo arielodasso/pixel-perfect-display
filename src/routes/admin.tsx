@@ -1,15 +1,9 @@
 import { createFileRoute, Link, Outlet } from "@tanstack/react-router";
-import {
-  BarChart3,
-  Building2,
-  LayoutDashboard,
-  LayoutGrid,
-  Settings,
-  Users,
-} from "lucide-react";
+import { BarChart3, Building2, LayoutDashboard, LayoutGrid, Settings, Users } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { organization, project } from "@/data/demo";
+import type { LucideIcon } from "lucide-react";
+import { useOrganization, useProject } from "@/services/store";
 
 export const Route = createFileRoute("/admin")({
   head: () => ({
@@ -25,16 +19,34 @@ export const Route = createFileRoute("/admin")({
   component: AdminLayout,
 });
 
-const nav = [
+type AdminTo =
+  | "/admin"
+  | "/admin/proyectos"
+  | "/admin/unidades"
+  | "/admin/leads"
+  | "/admin/analytics"
+  | "/admin/configuracion";
+
+type NavItem = {
+  to: AdminTo;
+  label: string;
+  icon: LucideIcon;
+  exact?: boolean;
+};
+
+const nav: NavItem[] = [
   { to: "/admin", label: "Resumen", icon: LayoutDashboard, exact: true },
   { to: "/admin/proyectos", label: "Proyectos", icon: Building2 },
   { to: "/admin/unidades", label: "Unidades", icon: LayoutGrid },
   { to: "/admin/leads", label: "Leads", icon: Users },
   { to: "/admin/analytics", label: "Analytics", icon: BarChart3 },
   { to: "/admin/configuracion", label: "Configuración", icon: Settings },
-] as const;
+];
 
 function AdminLayout() {
+  const organization = useOrganization();
+  const project = useProject();
+
   return (
     <div className="min-h-screen lg:grid lg:grid-cols-[248px_1fr]">
       <aside className="border-b border-sidebar-border bg-sidebar lg:sticky lg:top-0 lg:h-screen lg:border-b-0 lg:border-r">
