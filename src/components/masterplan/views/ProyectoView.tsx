@@ -1,6 +1,7 @@
 import { Check, MapPin, Navigation } from "lucide-react";
 
 import { ConstructionSection } from "@/components/construction/ConstructionSection";
+import { FinancingSimulator } from "@/components/financing/FinancingSimulator";
 import { Button } from "@/components/ui/button";
 import { typologies } from "@/data/demo";
 import { formatArea, formatPrice } from "@/lib/format";
@@ -21,9 +22,11 @@ interface Props {
   units: Unit[];
   settings: ShowroomSettings;
   onConsult: () => void;
+  /** Abre el formulario de leads con el resultado de un simulador precargado. */
+  onPlanRequest: (message: string) => void;
 }
 
-export function ProyectoView({ project, units, settings, onConsult }: Props) {
+export function ProyectoView({ project, units, settings, onConsult, onPlanRequest }: Props) {
   return (
     <div className="h-full overflow-y-auto">
       <div className="relative h-[38vh] min-h-[260px] w-full">
@@ -120,6 +123,20 @@ export function ProyectoView({ project, units, settings, onConsult }: Props) {
                   Pedir plan de pago
                 </Button>
               </div>
+            </div>
+            <div className="mt-3">
+              <FinancingSimulator
+                initialPrice={project.priceFrom}
+                units={units}
+                onRequestQuote={(summary) => {
+                  const message = [
+                    "Me interesa un plan de financiación personalizado.",
+                    `Precio de referencia: ${formatPrice(summary.referencePrice)}`,
+                    `Anticipo: ${formatPrice(summary.advance)} · Cuotas: ${formatPrice(summary.installments)} en ${summary.termMonths} meses · Saldo: ${formatPrice(summary.balance)}`,
+                  ].join(".\n");
+                  onPlanRequest(message);
+                }}
+              />
             </div>
           </div>
         )}

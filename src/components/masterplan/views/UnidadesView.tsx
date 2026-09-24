@@ -1,6 +1,8 @@
+import { Search } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { UnitStatusBadge } from "@/components/StatusBadge";
+import { typologies } from "@/data/demo";
 import { formatArea, formatPrice } from "@/lib/format";
 import { unitThumb } from "@/lib/renders";
 import { trackEvent } from "@/lib/tracking";
@@ -45,11 +47,30 @@ export function UnidadesView({
   onTour360,
 }: Props) {
   const [filter, setFilter] = useState<"todas" | UnitStatus>("todas");
+  const [search, setSearch] = useState("");
+  const [typology, setTypology] = useState("todas");
+  const [order, setOrder] = useState<"piso" | "precio-asc" | "precio-desc">("piso");
 
   const filtered = useMemo(() => {
-    const list = filter === "todas" ? units : units.filter((unit) => unit.status === filter);
-    return [...list].sort((a, b) => b.floor - a.floor || a.number.localeCompare(b.number));
-  }, [units, filter]);
+    const q = search.trim().toLowerCase();
+    const list = units.filter((unit) => {
+      if (filter !== "todas" && unit.status !== filter) return false;
+      if (typology !== "todas" && unit.typologyId !== typology) return false;
+      if (
+        q &&
+        ![unit.code, unit.number, unit.typology, unit.orientation].some((value) =>
+          value.toLowerCase().includes(q),
+        )
+      )
+        return false;
+      return true;
+    });
+    return [...list].sort((a, b) => {
+      if (order === "precio-asc") return a.price - b.price;
+      if (order === "precio-desc") return b.price - a.price;
+      return b.floor - a.floor || a.number.localeCompare(b.number);
+    });
+  }, [units, filter, search, typology, order]);
 
   return (
     <div className="flex h-full min-h-0 flex-col lg:flex-row">
@@ -84,6 +105,40 @@ export function UnidadesView({
             })}
           </div>
         </header>
+
+        <div className="mb-4 flex flex-wrap items-center gap-2">
+          <label className="relative min-w-[200px] flex-1">
+            <input
+              type="search"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Buscar por unidad, piso u orientación…"
+              className="h-9 w-full rounded-lg border border-input bg-elevated pl-8 pr-3 text-xs outline-none transition-colors hover:border-ring/40 focus:border-ring/60"
+            />
+            <Search className="absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+          </label>
+          <select
+            value={typology}
+            onChange={(e) => setTypology(e.target.value)}
+            className="h-9 appearance-none rounded-lg border border-input bg-elevated px-3 text-xs outline-none transition-colors hover:border-ring/40 focus:border-ring/60"
+          >
+            <option value="todas">Todas las tipologías</option>
+            {typologies.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.name}
+              </option>
+            ))}
+          </select>
+          <select
+            value={order}
+            onChange={(e) => setOrder(e.target.value as typeof order)}
+            className="h-9 appearance-none rounded-lg border border-input bg-elevated px-3 text-xs outline-none transition-colors hover:border-ring/40 focus:border-ring/60"
+          >
+            <option value="piso">Piso descendente</option>
+            <option value="precio-asc">Precio ascendente</option>
+            <option value="precio-desc">Precio descendente</option>
+          </select>
+        </div>
 
         <div className="grid gap-4 pb-24 sm:grid-cols-2 xl:grid-cols-3">
           {filtered.map((unit) => (
@@ -127,6 +182,11 @@ export function UnidadesView({
               </div>
             </button>
           ))}
+          {filtered.length === 0 && (
+            <p className="col-span-full rounded-xl border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
+              No hay unidades que coincidan con la búsqueda. Probá con otros filtros.
+            </p>
+          )}
         </div>
       </div>
 

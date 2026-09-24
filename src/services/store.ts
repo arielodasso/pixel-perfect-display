@@ -7,9 +7,11 @@ import {
   units as demoUnits,
 } from "@/data/demo";
 import type {
+  IntegrationConfig,
   Lead,
   LeadSource,
   LeadStatus,
+  Notification,
   Organization,
   Project,
   Unit,
@@ -40,6 +42,10 @@ interface State {
   settings: ShowroomSettings;
   /** Códigos de unidades en el comparador (hasta 3). Estado global compartido. */
   compare: string[];
+  /** Integraciones CRM / webhooks / notificaciones. */
+  integrations: IntegrationConfig;
+  /** Notificaciones internas del panel (se simulan desde la demo). */
+  notifications: Notification[];
 }
 
 const defaultSettings: ShowroomSettings = {
@@ -53,6 +59,15 @@ const defaultSettings: ShowroomSettings = {
   showWhatsappCta: true,
 };
 
+const defaultIntegrations: IntegrationConfig = {
+  crmType: "none",
+  crmApiKey: "",
+  webhookUrl: "",
+  notifyEmail: demoOrganization.email,
+  notifyOnLead: true,
+  notifyOnReservation: true,
+};
+
 const initialState: State = {
   leads: demoLeads,
   units: demoUnits,
@@ -60,6 +75,15 @@ const initialState: State = {
   organization: demoOrganization,
   settings: defaultSettings,
   compare: [],
+  integrations: defaultIntegrations,
+  notifications: demoLeads.slice(0, 3).map((lead, index) => ({
+    id: `notif_seed_${index}`,
+    title: `Nuevo lead — ${lead.name}`,
+    body: lead.unitCode ? `Consultó por la unidad ${lead.unitCode}.` : "Consulta general.",
+    date: lead.createdAt,
+    read: false,
+    leadId: lead.id,
+  })),
 };
 
 let state: State = initialState;
@@ -107,6 +131,14 @@ export function useCompare() {
   return useStore().compare;
 }
 
+export function useIntegrations() {
+  return useStore().integrations;
+}
+
+export function useNotifications() {
+  return useStore().notifications;
+}
+
 export function useUnit(code: string | null) {
   const units = useUnits();
   return code ? (units.find((unit) => unit.code === code) ?? null) : null;
@@ -143,7 +175,60 @@ export function createLead(input: NewLeadInput): Lead {
     ...input,
   };
   setState({ ...state, leads: [lead, ...state.leads] });
+
+  const { integrations } = state;
+  if (integrations.notifyOnLead) {
+    pushNotification({
+      title: `Nuevo lead — ${lead.name}`,
+      body: lead.unitCode ? `Consultó por la unidad ${lead.unitCode}.` : "Consulta general.",
+      leadId: lead.id,
+    });
+    notifyIntegrations("lead.created", { ...lead });
+  }
   return lead;
+}
+
+/** Registra una notificación interna del panel. */
+export function pushNotification(notification: Omit<Notification, "id" | "date" | "read">) {
+  setState({
+    ...state,
+    notifications: [
+      {
+        ...notification,
+        id: `notif_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+        date: new Date().toISOString(),
+        read: false,
+      },
+      ...state.notifications,
+    ].slice(0, 50),
+  });
+}
+
+export function markAllNotificationsRead() {
+  setState({
+    ...state,
+    notifications: state.notifications.map((n) => ({ ...n, read: true })),
+  });
+}
+
+/**
+ * Simula el envío hacia CRM / webhooks configurados. En producción este
+ * hook se reemplaza por llamadas reales (Lovable Cloud / Edge Function).
+ */
+export function notifyIntegrations(event: string, data: Record<string, unknown>) {
+  const { integrations, organization } = state;
+  if (integrations.crmType !== "none") {
+    console.info(`[CRM:${integrations.crmType}] ${event}`, data);
+  }
+  if (integrations.webhookUrl.trim()) {
+    console.info(`[Webhook] POST ${integrations.webhookUrl}`, data);
+  }
+
+  console.info(`[${organization.name}] ${event}`, data);
+}
+
+export function updateIntegrations(patch: Partial<IntegrationConfig>) {
+  setState({ ...state, integrations: { ...state.integrations, ...patch } });
 }
 
 export const MAX_COMPARE = 3;
@@ -205,10 +290,34 @@ export function deleteLead(id: string) {
 }
 
 export function updateUnitStatus(id: string, status: UnitStatus) {
+  const unit = state.units.find((u) => u.id === id);
   setState({
     ...state,
-    units: state.units.map((unit) => (unit.id === id ? { ...unit, status } : unit)),
+    units: state.units.map((item) => (item.id === id ? { ...item, status } : item)),
   });
+  if (unit && (status === "reservada" || status === "vendida") && unit.status !== status) {
+    if (state.integrations.notifyOnReservation) {
+      pushNotification({
+        title: `Unidad ${unit.code} ${status === "reservada" ? "reservada" : "vendida"}`,
+        body: `La unidad ${unit.number} cambió a estado "${status}".`,
+      });
+      notifyIntegrations(`unit.${status}`, { unitCode: unit.code });
+    }
+  }
+}
+
+export function updateUnit(id: string, patch: Partial<Unit>) {
+  setState({
+    ...state,
+    units: state.units.map((unit) => (unit.id === id ? { ...unit, ...patch } : unit)),
+  });
+}
+
+/** Inserta o reemplaza unidades por id (usado por importación CSV). */
+export function upsertUnits(units: Unit[]) {
+  const next = new Map(state.units.map((unit) => [unit.id, unit]));
+  units.forEach((unit) => next.set(unit.id, unit));
+  setState({ ...state, units: [...next.values()] });
 }
 
 export function updateProject(patch: Partial<Project>) {
@@ -249,6 +358,15 @@ export function resetDemoData() {
     organization: { ...demoOrganization },
     settings: { ...defaultSettings },
     compare: [],
+    integrations: { ...defaultIntegrations, notifyEmail: demoOrganization.email },
+    notifications: demoLeads.slice(0, 3).map((lead, index) => ({
+      id: `notif_seed_${index}`,
+      title: `Nuevo lead — ${lead.name}`,
+      body: lead.unitCode ? `Consultó por la unidad ${lead.unitCode}.` : "Consulta general.",
+      date: lead.createdAt,
+      read: false,
+      leadId: lead.id,
+    })),
   });
 }
 

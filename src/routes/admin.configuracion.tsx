@@ -1,5 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Building2, Database, Palette, SlidersHorizontal } from "lucide-react";
+import {
+  Bell,
+  Building2,
+  Database,
+  Palette,
+  PlugZap,
+  SlidersHorizontal,
+  Webhook,
+} from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -7,17 +15,26 @@ import { AdminPage } from "@/components/admin/AdminPage";
 import { Field } from "@/components/admin/fields";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { organization as demoOrganization } from "@/data/demo";
 import {
   resetDemoData,
+  updateIntegrations,
   updateOrganization,
   updateSettings,
+  useIntegrations,
   useOrganization,
   useSettings,
 } from "@/services/store";
 import type { ShowroomSettings } from "@/services/store";
-import type { Organization } from "@/types/domain";
+import type { CrmType, Organization } from "@/types/domain";
 
 export const Route = createFileRoute("/admin/configuracion")({
   component: AdminConfiguracion,
@@ -49,6 +66,7 @@ const sectionSwitches: { key: keyof ShowroomSettings; label: string; hint: strin
 function AdminConfiguracion() {
   const organization = useOrganization();
   const settings = useSettings();
+  const integrations = useIntegrations();
   const [draft, setDraft] = useState<Organization>({ ...organization });
   const [saving, setSaving] = useState(false);
 
@@ -135,6 +153,120 @@ function AdminConfiguracion() {
               </div>
             </Field>
           </div>
+        </section>
+
+        <section className="panel p-6">
+          <div className="flex items-center gap-2 border-b border-border pb-4">
+            <PlugZap className="size-4 text-primary" />
+            <h2 className="text-base font-medium">Integraciones</h2>
+          </div>
+          <div className="mt-5 space-y-5">
+            <Field label="CRM" hint="Enviar cada lead nuevo a tu CRM.">
+              <Select
+                value={integrations.crmType}
+                onValueChange={(v) => updateIntegrations({ crmType: v as CrmType })}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Ninguno (gestión manual)</SelectItem>
+                  <SelectItem value="hubspot">HubSpot</SelectItem>
+                  <SelectItem value="salesforce">Salesforce</SelectItem>
+                  <SelectItem value="pipedrive">Pipedrive</SelectItem>
+                </SelectContent>
+              </Select>
+            </Field>
+            {integrations.crmType !== "none" && (
+              <Field
+                label="API key del CRM"
+                hint="Se guarda en las variables seguras del proyecto."
+              >
+                <Input
+                  type="password"
+                  value={integrations.crmApiKey}
+                  onChange={(e) => updateIntegrations({ crmApiKey: e.target.value })}
+                  placeholder="sk_live_…"
+                />
+              </Field>
+            )}
+            <Field label="Webhook de notificación" hint="Recibís un POST por cada lead o reserva.">
+              <div className="flex gap-2">
+                <Input
+                  value={integrations.webhookUrl}
+                  onChange={(e) => updateIntegrations({ webhookUrl: e.target.value })}
+                  placeholder="https://tu-backend.com/hooks/leads"
+                />
+                <Button
+                  variant="outline"
+                  size="icon"
+                  type="button"
+                  aria-label="Probar webhook"
+                  title="Enviar evento de prueba"
+                  onClick={() => {
+                    if (!integrations.webhookUrl.trim()) {
+                      toast.error("Primero configura una URL de webhook.");
+                      return;
+                    }
+                    toast.success("Webhook probado", {
+                      description: "Simulación: POST con un lead de ejemplo (vista demo).",
+                    });
+                  }}
+                >
+                  <Webhook className="size-4" />
+                </Button>
+              </div>
+            </Field>
+            <p className="text-[11px] leading-relaxed text-muted-foreground">
+              La integración se entrega a través de Lovable Cloud. En la vista demo se simula el
+              envío en la consola del navegador.
+            </p>
+          </div>
+        </section>
+
+        <section className="panel p-6">
+          <div className="flex items-center gap-2 border-b border-border pb-4">
+            <Bell className="size-4 text-primary" />
+            <h2 className="text-base font-medium">Notificaciones</h2>
+          </div>
+          <ul className="mt-5 space-y-4">
+            <li className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-sm font-medium">Nuevo lead</p>
+                <p className="text-xs text-muted-foreground">
+                  Avisa cuando alguien deja un formulario en el showroom.
+                </p>
+              </div>
+              <Switch
+                checked={integrations.notifyOnLead}
+                onCheckedChange={(checked) => updateIntegrations({ notifyOnLead: checked })}
+                aria-label="Notificar nuevo lead"
+              />
+            </li>
+            <li className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-sm font-medium">Reserva o venta</p>
+                <p className="text-xs text-muted-foreground">
+                  Avisa cuando una unidad cambia de estado en el inventario.
+                </p>
+              </div>
+              <Switch
+                checked={integrations.notifyOnReservation}
+                onCheckedChange={(checked) => updateIntegrations({ notifyOnReservation: checked })}
+                aria-label="Notificar reserva o venta"
+              />
+            </li>
+            <li className="border-t border-border pt-4">
+              <Field label="Email de destino" hint="Copias de las notificaciones.">
+                <Input
+                  type="email"
+                  value={integrations.notifyEmail}
+                  onChange={(e) => updateIntegrations({ notifyEmail: e.target.value })}
+                  placeholder="ventas@horizonte.com.ar"
+                />
+              </Field>
+            </li>
+          </ul>
         </section>
 
         <section className="panel p-6 lg:col-span-2">

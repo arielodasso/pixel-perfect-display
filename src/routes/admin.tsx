@@ -1,6 +1,7 @@
 import { createFileRoute, Link, Outlet } from "@tanstack/react-router";
 import { BarChart3, Building2, LayoutDashboard, LayoutGrid, Settings, Users } from "lucide-react";
 
+import { NotificationBell } from "@/components/admin/NotificationBell";
 import { Button } from "@/components/ui/button";
 import type { LucideIcon } from "lucide-react";
 import { useOrganization, useProject } from "@/services/store";
@@ -83,6 +84,9 @@ function AdminLayout() {
       </aside>
 
       <main className="min-w-0">
+        <div className="sticky top-0 z-30 flex justify-end px-4 pt-4">
+          <NotificationBell />
+        </div>
         <Outlet />
       </main>
     </div>

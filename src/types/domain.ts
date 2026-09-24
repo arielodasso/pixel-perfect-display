@@ -8,6 +8,34 @@ export type ProjectStatus = "En preventa" | "En obra" | "Terminado" | "Borrador"
 
 export type LeadStatus = "Nuevo" | "Contactado" | "Calificado" | "Visita" | "Reserva" | "Cerrado";
 
+/** CRMs disponibles para la integración de leads. */
+export const CRM_TYPES = ["none", "hubspot", "salesforce", "pipedrive"] as const;
+export type CrmType = (typeof CRM_TYPES)[number];
+
+/** Configuración de integraciones externas (CRM + webhooks). */
+export interface IntegrationConfig {
+  crmType: CrmType;
+  crmApiKey: string;
+  webhookUrl: string;
+  notifyEmail: string;
+  notifyOnLead: boolean;
+  notifyOnReservation: boolean;
+}
+
+/** Notificación interna del panel (timeline de actividad). */
+export interface Notification {
+  id: string;
+  title: string;
+  body: string;
+  date: string;
+  read: boolean;
+  leadId?: string;
+}
+
+/** Categorías de la galería de renders/imágenes del proyecto. */
+export const GALLERY_CATEGORIES = ["Renders", "Amenities", "Obra"] as const;
+export type GalleryCategory = (typeof GALLERY_CATEGORIES)[number] | (string & {});
+
 export interface Organization {
   id: string;
   name: string;
@@ -129,7 +157,7 @@ export interface Project {
   amenities: string[];
   features: string[];
   heroImage: string;
-  gallery: { id: string; url: string; caption: string }[];
+  gallery: { id: string; url: string; caption: string; category: GalleryCategory }[];
   virtualTourUrl: string | null;
   virtualTour?: VirtualTourConfig | undefined;
   floors: number;
@@ -190,6 +218,7 @@ export type TrackingEvent =
   | "virtual_tour_360_scene"
   | "virtual_tour_360_scene_view"
   | "financing_view"
+  | "gallery_view"
   | "lead_form_open"
   | "lead_created"
   | "whatsapp_click";

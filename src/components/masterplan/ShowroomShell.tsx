@@ -47,6 +47,7 @@ export function ShowroomShell() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
   const [presetUnit, setPresetUnit] = useState<string | null>(null);
+  const [presetMessage, setPresetMessage] = useState<string | null>(null);
 
   const config = project.virtualTour;
   const tour = useMemo(() => generateVirtualTour(project, units, config), [project, units, config]);
@@ -81,8 +82,9 @@ export function ShowroomShell() {
     setMenuOpen(false);
   }
 
-  function openForm(unit: Unit | null) {
+  function openForm(unit: Unit | null, message: string | null = null) {
     setPresetUnit(unit?.code ?? null);
+    setPresetMessage(message);
     setFormOpen(true);
   }
 
@@ -196,6 +198,7 @@ export function ShowroomShell() {
               units={units}
               settings={settings}
               onConsult={() => openForm(null)}
+              onPlanRequest={(message) => openForm(null, message)}
             />
           )}
 
@@ -267,6 +270,7 @@ export function ShowroomShell() {
         onOpenChange={setFormOpen}
         units={units}
         presetUnitCode={presetUnit}
+        presetMessage={presetMessage}
         title={presetUnit ? `Consultar por ${presetUnit}` : "Solicitar información"}
       />
     </div>

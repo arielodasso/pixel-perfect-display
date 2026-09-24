@@ -1,6 +1,10 @@
+import { useState } from "react";
+
 import { cn } from "@/lib/utils";
 import { formatArea, formatPrice, ordinalFloor } from "@/lib/format";
 import type { Unit } from "@/types/domain";
+
+import { Building3DViewer } from "./Building3DViewer";
 
 const statusRing: Record<Unit["status"], string> = {
   disponible: "border-available/50 bg-available/10 hover:bg-available/20 text-foreground",
@@ -23,6 +27,7 @@ export function BuildingExplorer({
   onSelect,
   className,
 }: Props) {
+  const [view, setView] = useState<"2d" | "3d">("3d");
   const floors = [...new Set(units.map((u) => u.floor))].sort((a, b) => b - a);
 
   return (
@@ -32,64 +37,98 @@ export function BuildingExplorer({
           <p className="eyebrow">Masterplan</p>
           <h3 className="text-base font-medium">Corte del edificio</h3>
         </div>
-        <Legend />
-      </div>
-
-      <div className="space-y-2 p-4 sm:p-5">
-        <div className="mx-auto h-2 w-[92%] rounded-t-md bg-elevated" aria-hidden />
-        {floors.map((floor) => {
-          const floorUnits = units
-            .filter((u) => u.floor === floor)
-            .sort((a, b) => a.number.localeCompare(b.number));
-          return (
-            <div key={floor} className="flex items-stretch gap-3">
-              <div className="flex w-14 shrink-0 items-center justify-end text-xs text-muted-foreground">
-                {floor}° piso
-              </div>
-              <div className="grid flex-1 grid-cols-3 gap-2">
-                {floorUnits.map((unit) => {
-                  const isSelected = unit.code === selectedCode;
-                  const inCompare = compareCodes.includes(unit.code);
-                  return (
-                    <button
-                      key={unit.id}
-                      type="button"
-                      onClick={() => onSelect(unit)}
-                      aria-label={`Unidad ${unit.number}, ${unit.typology}, ${unit.status}`}
-                      className={cn(
-                        "group relative rounded-md border px-2 py-3 text-left transition-all duration-200",
-                        statusRing[unit.status],
-                        isSelected && "ring-2 ring-ring ring-offset-2 ring-offset-background",
-                        inCompare && "outline outline-1 outline-primary/60",
-                      )}
-                    >
-                      <span className="block text-sm font-medium tabular-nums">{unit.number}</span>
-                      <span className="block truncate text-[11px] text-muted-foreground">
-                        {unit.typology}
-                      </span>
-                      <span className="pointer-events-none absolute inset-x-1 -top-14 z-10 hidden rounded-md border border-border bg-popover p-2 text-[11px] leading-tight shadow-panel group-hover:block">
-                        {ordinalFloor(unit.floor)} · {formatArea(unit.area)}
-                        <br />
-                        {unit.status === "disponible"
-                          ? formatPrice(unit.price, unit.currency)
-                          : unit.status}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          );
-        })}
-        <div className="flex items-stretch gap-3">
-          <div className="flex w-14 shrink-0 items-center justify-end text-xs text-muted-foreground">
-            PB
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 rounded-lg border border-border bg-background/60 p-0.5">
+            {(["2d", "3d"] as const).map((id) => (
+              <button
+                key={id}
+                type="button"
+                onClick={() => setView(id)}
+                className={cn(
+                  "rounded-md px-2.5 py-1 text-xs font-medium transition-colors",
+                  view === id
+                    ? "bg-primary text-primary-foreground"
+                    : "text-muted-foreground hover:text-foreground",
+                )}
+              >
+                {id === "2d" ? "Corte 2D" : "Visor 3D"}
+              </button>
+            ))}
           </div>
-          <div className="flex-1 rounded-md border border-dashed border-border px-3 py-4 text-xs text-muted-foreground">
-            Acceso, lobby y locales comerciales
-          </div>
+          <Legend />
         </div>
       </div>
+
+      {view === "3d" ? (
+        <div className="h-[480px] p-4 sm:p-5">
+          <Building3DViewer
+            units={units}
+            floors={units.length > 0 ? Math.max(...units.map((u) => u.floor)) : 0}
+            selectedCode={selectedCode ?? null}
+            compareCodes={compareCodes}
+            onSelect={onSelect}
+            className="h-full w-full"
+          />
+        </div>
+      ) : (
+        <div className="space-y-2 p-4 sm:p-5">
+          <div className="mx-auto h-2 w-[92%] rounded-t-md bg-elevated" aria-hidden />
+          {floors.map((floor) => {
+            const floorUnits = units
+              .filter((u) => u.floor === floor)
+              .sort((a, b) => a.number.localeCompare(b.number));
+            return (
+              <div key={floor} className="flex items-stretch gap-3">
+                <div className="flex w-14 shrink-0 items-center justify-end text-xs text-muted-foreground">
+                  {floor}° piso
+                </div>
+                <div className="grid flex-1 grid-cols-3 gap-2">
+                  {floorUnits.map((unit) => {
+                    const isSelected = unit.code === selectedCode;
+                    const inCompare = compareCodes.includes(unit.code);
+                    return (
+                      <button
+                        key={unit.id}
+                        type="button"
+                        onClick={() => onSelect(unit)}
+                        aria-label={`Unidad ${unit.number}, ${unit.typology}, ${unit.status}`}
+                        className={cn(
+                          "group relative rounded-md border px-2 py-3 text-left transition-all duration-200",
+                          statusRing[unit.status],
+                          isSelected && "ring-2 ring-ring ring-offset-2 ring-offset-background",
+                          inCompare && "outline outline-1 outline-primary/60",
+                        )}
+                      >
+                        <span className="block text-sm font-medium tabular-nums">
+                          {unit.number}
+                        </span>
+                        <span className="block truncate text-[11px] text-muted-foreground">
+                          {unit.typology}
+                        </span>
+                        <span className="pointer-events-none absolute inset-x-1 -top-14 z-10 hidden rounded-md border border-border bg-popover p-2 text-[11px] leading-tight shadow-panel group-hover:block">
+                          {ordinalFloor(unit.floor)} · {formatArea(unit.area)}
+                          <br />
+                          {unit.status === "disponible"
+                            ? formatPrice(unit.price, unit.currency)
+                            : unit.status}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
+          <div className="flex items-stretch gap-3">
+            <div className="flex w-14 shrink-0 items-center justify-end text-xs text-muted-foreground">
+              PB
+            </div>
+            <div className="flex-1 rounded-md border border-dashed border-border px-3 py-4 text-xs text-muted-foreground">
+              Acceso, lobby y locales comerciales
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
