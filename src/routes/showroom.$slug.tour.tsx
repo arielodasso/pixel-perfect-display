@@ -84,6 +84,7 @@ function VirtualTourPage() {
         units={units}
         onConsult={openConsult}
         preview={!tour.published}
+        autoStart360
       />
       <LeadFormDialog
         open={formOpen}

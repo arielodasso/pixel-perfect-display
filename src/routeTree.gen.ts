@@ -19,6 +19,7 @@ import { Route as AdminUnidadesRouteImport } from './routes/admin.unidades'
 import { Route as ShowroomSlugRouteImport } from './routes/showroom.$slug'
 import { Route as AdminProyectosIndexRouteImport } from './routes/admin.proyectos.index'
 import { Route as AdminProyectosSlugRouteImport } from './routes/admin.proyectos.$slug'
+import { Route as ShowroomSlugIndexRouteImport } from './routes/showroom.$slug.index'
 import { Route as ShowroomSlugTourRouteImport } from './routes/showroom.$slug.tour'
 
 const IndexRoute = IndexRouteImport.update({
@@ -71,6 +72,11 @@ const AdminProyectosSlugRoute = AdminProyectosSlugRouteImport.update({
   path: '/proyectos/$slug',
   getParentRoute: () => AdminRoute,
 } as any)
+const ShowroomSlugIndexRoute = ShowroomSlugIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => ShowroomSlugRoute,
+} as any)
 const ShowroomSlugTourRoute = ShowroomSlugTourRouteImport.update({
   id: '/tour',
   path: '/tour',
@@ -89,6 +95,7 @@ export interface FileRoutesByFullPath {
   '/admin/proyectos/$slug': typeof AdminProyectosSlugRoute
   '/showroom/$slug/tour': typeof ShowroomSlugTourRoute
   '/admin/proyectos/': typeof AdminProyectosIndexRoute
+  '/showroom/$slug/': typeof ShowroomSlugIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -96,11 +103,11 @@ export interface FileRoutesByTo {
   '/admin/configuracion': typeof AdminConfiguracionRoute
   '/admin/leads': typeof AdminLeadsRoute
   '/admin/unidades': typeof AdminUnidadesRoute
-  '/showroom/$slug': typeof ShowroomSlugRouteWithChildren
   '/admin': typeof AdminIndexRoute
   '/admin/proyectos/$slug': typeof AdminProyectosSlugRoute
   '/showroom/$slug/tour': typeof ShowroomSlugTourRoute
   '/admin/proyectos': typeof AdminProyectosIndexRoute
+  '/showroom/$slug': typeof ShowroomSlugIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -115,6 +122,7 @@ export interface FileRoutesById {
   '/admin/proyectos/$slug': typeof AdminProyectosSlugRoute
   '/showroom/$slug/tour': typeof ShowroomSlugTourRoute
   '/admin/proyectos/': typeof AdminProyectosIndexRoute
+  '/showroom/$slug/': typeof ShowroomSlugIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -130,6 +138,7 @@ export interface FileRouteTypes {
     | '/admin/proyectos/$slug'
     | '/showroom/$slug/tour'
     | '/admin/proyectos/'
+    | '/showroom/$slug/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -137,11 +146,11 @@ export interface FileRouteTypes {
     | '/admin/configuracion'
     | '/admin/leads'
     | '/admin/unidades'
-    | '/showroom/$slug'
     | '/admin'
     | '/admin/proyectos/$slug'
     | '/showroom/$slug/tour'
     | '/admin/proyectos'
+    | '/showroom/$slug'
   id:
     | '__root__'
     | '/'
@@ -155,6 +164,7 @@ export interface FileRouteTypes {
     | '/admin/proyectos/$slug'
     | '/showroom/$slug/tour'
     | '/admin/proyectos/'
+    | '/showroom/$slug/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -235,6 +245,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminProyectosSlugRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/showroom/$slug/': {
+      id: '/showroom/$slug/'
+      path: '/'
+      fullPath: '/showroom/$slug/'
+      preLoaderRoute: typeof ShowroomSlugIndexRouteImport
+      parentRoute: typeof ShowroomSlugRoute
+    }
     '/showroom/$slug/tour': {
       id: '/showroom/$slug/tour'
       path: '/tour'
@@ -269,10 +286,12 @@ const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
 
 interface ShowroomSlugRouteChildren {
   ShowroomSlugTourRoute: typeof ShowroomSlugTourRoute
+  ShowroomSlugIndexRoute: typeof ShowroomSlugIndexRoute
 }
 
 const ShowroomSlugRouteChildren: ShowroomSlugRouteChildren = {
   ShowroomSlugTourRoute: ShowroomSlugTourRoute,
+  ShowroomSlugIndexRoute: ShowroomSlugIndexRoute,
 }
 
 const ShowroomSlugRouteWithChildren = ShowroomSlugRoute._addFileChildren(

@@ -132,6 +132,7 @@ export function PanoramaViewer({
       cancelAnimationFrame(raf);
       observer.disconnect();
       geometry.dispose();
+      material.map?.dispose();
       material.dispose();
       renderer.dispose();
       host.removeChild(renderer.domElement);

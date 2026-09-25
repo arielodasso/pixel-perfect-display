@@ -26,6 +26,7 @@ interface Props {
   preview?: boolean;
   /** Embebido dentro del shell (ocupa el 100% del contenedor). */
   embedded?: boolean;
+  autoStart360?: boolean;
 }
 
 const STATUS_DOT: Record<Unit["status"], string> = {
@@ -43,16 +44,21 @@ export function TourViewer({
   onConsult,
   preview = false,
   embedded = false,
+  autoStart360 = false,
 }: Props) {
   const compare = useCompare();
   const unitByCode = useMemo(() => new Map(units.map((unit) => [unit.code, unit])), [units]);
 
   const firstFloorWithUnits = tour.floors.findIndex((floor) => floor.units.length > 0);
+  const firstTourUnit =
+    tour.floors[firstFloorWithUnits]?.units.find((unit) => unit.scenes.length > 0) ?? null;
   const [activeIndex, setActiveIndex] = useState(
     firstFloorWithUnits >= 0 ? firstFloorWithUnits : 0,
   );
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [tour360, setTour360] = useState(false);
+  const [selectedId, setSelectedId] = useState<string | null>(
+    autoStart360 ? (firstTourUnit?.id ?? null) : null,
+  );
+  const [tour360, setTour360] = useState(autoStart360 && firstTourUnit !== null);
 
   const floor = tour.floors[activeIndex];
   const selectedTourUnit = floor?.units.find((unit) => unit.id === selectedId) ?? null;
