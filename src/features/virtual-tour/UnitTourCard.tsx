@@ -3,9 +3,11 @@ import { useState } from "react";
 import { toast } from "sonner";
 
 import { FloorplanViewer } from "@/components/building/FloorplanViewer";
+import { RenderImage } from "@/components/masterplan/RenderImage";
 import { UnitStatusBadge } from "@/components/StatusBadge";
 import { Button } from "@/components/ui/button";
 import { formatArea, formatPrice } from "@/lib/format";
+import { unitHero } from "@/lib/renders";
 import { useCompare, toggleCompareUnit } from "@/services/store";
 import type { Project, Unit } from "@/types/domain";
 
@@ -52,18 +54,27 @@ export function UnitTourCard({ unit, project, onConsult, onTour360, touring = fa
 
   return (
     <div className="flex h-full flex-col overflow-hidden">
-      <div className="border-b border-border p-5">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <p className="eyebrow">{unit.code}</p>
-            <h3 className="mt-1 text-2xl font-light tracking-tight">Unidad {unit.number}</h3>
-            <p className="mt-1 text-sm text-muted-foreground">
-              {unit.floor === 0 ? "Planta baja" : `${unit.floor}° piso`} · {unit.typology}
-            </p>
+      <RenderImage
+        cacheKey={`unit-${unit.code}`}
+        factory={() => unitHero(unit.code)}
+        alt={`Render de la unidad ${unit.number}`}
+        className="aspect-[16/9] w-full"
+      >
+        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-4">
+          <div className="flex items-end justify-between gap-3">
+            <div>
+              <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-white/60">
+                {unit.code}
+              </p>
+              <h3 className="text-2xl font-light tracking-tight">Unidad {unit.number}</h3>
+              <p className="text-xs text-white/60">
+                {unit.floor === 0 ? "Planta baja" : `${unit.floor}° piso`} · {unit.typology}
+              </p>
+            </div>
+            <UnitStatusBadge status={unit.status} />
           </div>
-          <UnitStatusBadge status={unit.status} />
         </div>
-      </div>
+      </RenderImage>
 
       <div className="border-b border-border p-5">
         <p className="eyebrow">Precio</p>

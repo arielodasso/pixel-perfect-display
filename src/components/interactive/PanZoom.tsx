@@ -164,14 +164,22 @@ export function PanZoom({
     return () => container.removeEventListener("wheel", handler as unknown as EventListener);
   }, [zoomAt]);
 
+  function capturePointer(element: HTMLElement, pointerId: number) {
+    if (!element.hasPointerCapture(pointerId)) element.setPointerCapture(pointerId);
+  }
+
   function pointerDown(event: ReactPointerEvent<HTMLDivElement>) {
-    event.currentTarget.setPointerCapture(event.pointerId);
     movedRef.current = false;
     const point = { x: event.clientX, y: event.clientY };
     pointers.current.set(event.pointerId, point);
     if (pointers.current.size === 1) {
       dragStart.current = { px: point.x, py: point.y, x: transform.x, y: transform.y };
     } else if (pointers.current.size === 2) {
+      // Pinch: capturamos ambos punteros para no perder el gesto fuera del
+      // contenedor.
+      for (const pointerId of pointers.current.keys()) {
+        capturePointer(event.currentTarget, pointerId);
+      }
       dragStart.current = null;
       const [a, b] = [...pointers.current.values()] as [Point, Point];
       pinchStart.current = {
@@ -219,6 +227,7 @@ export function PanZoom({
       const start = dragStart.current;
       if (Math.abs(point.x - start.px) + Math.abs(point.y - start.py) > 5) {
         movedRef.current = true;
+        capturePointer(event.currentTarget, event.pointerId);
       }
       apply({
         scale: transform.scale,

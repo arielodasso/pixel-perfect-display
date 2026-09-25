@@ -194,11 +194,14 @@ export function PanoramaViewer({
 
   function onPointerDown(event: ReactPointerEvent<HTMLDivElement>) {
     autoRotateRef.current = false;
-    event.currentTarget.setPointerCapture(event.pointerId);
     movedRef.current = false;
     dragMoveRef.current = 0;
     pointersRef.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
     if (pointersRef.current.size === 2) {
+      // Pinch: capturamos ambos dedos para no perder el gesto fuera del visor.
+      for (const pointerId of pointersRef.current.keys()) {
+        capturePointer(event.currentTarget, pointerId);
+      }
       const values = [...pointersRef.current.values()];
       const a = values[0]!;
       const b = values[1]!;
@@ -231,7 +234,10 @@ export function PanoramaViewer({
       const dx = current.x - prev.x;
       const dy = current.y - prev.y;
       dragMoveRef.current += Math.abs(dx) + Math.abs(dy);
-      if (dragMoveRef.current > 6) movedRef.current = true;
+      if (dragMoveRef.current > 6) {
+        movedRef.current = true;
+        capturePointer(event.currentTarget, event.pointerId);
+      }
       yawRef.current -= dx * DRAG_FACTOR;
       pitchRef.current = clamp(pitchRef.current - dy * DRAG_FACTOR, -1.35, 1.35);
     }
@@ -437,6 +443,10 @@ export function PanoramaViewer({
 
 function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
+}
+
+function capturePointer(element: HTMLElement, pointerId: number) {
+  if (!element.hasPointerCapture(pointerId)) element.setPointerCapture(pointerId);
 }
 
 function Hotspot({ label }: { label: string }) {
