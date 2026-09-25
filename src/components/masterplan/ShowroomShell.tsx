@@ -23,6 +23,7 @@ import { VIEWS, type ViewId } from "./nav";
 import { ContactoView } from "./views/ContactoView";
 import { GaleriaView } from "./views/GaleriaView";
 import { MasterplanView } from "./views/MasterplanView";
+import { ModelView } from "./views/ModelView";
 import { PlantasView } from "./views/PlantasView";
 import { PortadaView } from "./views/PortadaView";
 import { ProyectoView } from "./views/ProyectoView";
@@ -60,6 +61,7 @@ export function ShowroomShell() {
       settings.showMilestones ||
       settings.showLocation,
     masterplan: settings.showUnits,
+    modelo: true,
     plantas: settings.showUnits && Boolean(tour),
     unidades: settings.showUnits,
     recorrido: settings.showTour && Boolean(tour),
@@ -213,6 +215,10 @@ export function ShowroomShell() {
               compareActive={selected ? compare.includes(selected.code) : false}
               onTour360={onTour360}
             />
+          )}
+
+          {view === "modelo" && (
+            <ModelView project={project} />
           )}
 
           {view === "plantas" && tour && (
