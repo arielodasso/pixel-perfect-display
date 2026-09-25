@@ -47,17 +47,19 @@ function buildFloor(floorConfig: VirtualTourFloorConfig, units: Unit[]): Virtual
   const configured = floorConfig.unitPlacements.flatMap((placement) => {
     const unit = byId.get(placement.unitId);
     if (!unit) return [];
-    return [toTourUnit(unit, placement.x, placement.y)];
+    const tour360Url = placement.tour360Url?.trim() || floorConfig.tour360Url?.trim();
+    return [toTourUnit(unit, placement.x, placement.y, tour360Url)];
   });
 
   // Unidades del mismo nivel que no están posicionadas aún: se colocan
   // automáticamente para que la navegación siempre esté completa.
   const placedIds = new Set(configured.map((unit) => unit.unitId));
+  const floorTour360Url = floorConfig.tour360Url?.trim();
   const auto = units
     .filter((unit) => unit.floor === floorConfig.level && !placedIds.has(unit.id))
     .map((unit, index, arr) => {
       const position = autoLayoutPositions(arr.length, index);
-      return toTourUnit(unit, position.x, position.y);
+      return toTourUnit(unit, position.x, position.y, floorTour360Url);
     });
 
   const floor: VirtualTourFloor = {
@@ -71,7 +73,7 @@ function buildFloor(floorConfig: VirtualTourFloorConfig, units: Unit[]): Virtual
   return floor;
 }
 
-function toTourUnit(unit: Unit, x: number, y: number): VirtualTourUnit {
+function toTourUnit(unit: Unit, x: number, y: number, tour360Url?: string): VirtualTourUnit {
   const tourUnit: VirtualTourUnit = {
     id: `${unit.id}__${Math.round(x)}_${Math.round(y)}`,
     unitId: unit.id,
@@ -88,33 +90,33 @@ function toTourUnit(unit: Unit, x: number, y: number): VirtualTourUnit {
     y,
     scenes: buildUnitScenes(unit),
   };
+  if (tour360Url) tourUnit.tour360Url = tour360Url;
   tourUnit.floorplan = unit.floorplan;
   return tourUnit;
 }
 
 /**
  * Genera el recorrido 360° de una unidad: las ambientes que la componen y
- * sus hotspots de navegación. Es puramente declarativo — la textura de cada
- * escena se rasteriza bajo demanda en el viewer (ver `panorama.ts`).
+ * sus hotspots de navegación. Es puramente declarativo — la geometría de cada
+ * ambiente se construye en el viewer (ver `room.ts`).
  */
 function buildUnitScenes(unit: Unit): VirtualTourScene[] {
   const kinds: VirtualTourSceneKind[] = ["living", "kitchen", "bedroom", "bath"];
   if (unit.balcony) kinds.push("balcony");
 
+  const seed = seedFromString(unit.id);
   return kinds.map((kind) => {
     const sceneId = sceneIdFor(unit.id, kind);
     const hotspots = kinds
       .filter((other) => other !== kind)
-      .map((other, index) =>
-        toSceneHotspot(kind, other, sceneIdFor(unit.id, other), index, kinds.length - 1),
-      );
+      .map((other) => toSceneHotspot(kind, other, sceneIdFor(unit.id, other), seed));
 
     return {
       id: sceneId,
       unitId: unit.id,
       kind,
       label: SCENE_LABELS[kind],
-      seed: seedFromString(unit.id),
+      seed,
       hotspots,
     };
   });
@@ -132,23 +134,35 @@ const SCENE_LABELS: Record<VirtualTourSceneKind, string> = {
   balcony: "Balcón",
 };
 
-/** Distribuye los destinos alrededor de la vista de cada ambiente. */
+/**
+ * Dirección (yaw en grados) hacia la que se ubica cada ambiente vecino desde
+ * un ambiente dado. Coincide con la geometría que arma `room.ts`, para que el
+ * hotspot caiga sobre la puerta real y no flotando en una pared cualquiera.
+ */
+const EXIT_YAW: Record<VirtualTourSceneKind, Partial<Record<VirtualTourSceneKind, number>>> = {
+  living: { balcony: 0, kitchen: -68, bath: 72, bedroom: 158 },
+  kitchen: { living: 0, bath: 118, bedroom: -118, balcony: -46 },
+  bedroom: { living: 178, bath: 92, balcony: 0, kitchen: -96 },
+  bath: { bedroom: 178, living: -88, kitchen: 0, balcony: 92 },
+  balcony: { living: 0, kitchen: 132, bedroom: -128, bath: -40 },
+};
+
+const DEFAULT_EXIT_YAW = 140;
+
 function toSceneHotspot(
   fromKind: VirtualTourSceneKind,
   toKind: VirtualTourSceneKind,
   targetSceneId: string,
-  index: number,
-  total: number,
+  seed: number,
 ): VirtualTourSceneHotspot {
-  const spacing = 360 / Math.max(1, total);
-  const base = fromKind === "living" ? -20 : 20;
-  let yaw = base + index * spacing;
-  if (yaw > 180) yaw -= 360;
+  const base = EXIT_YAW[fromKind][toKind] ?? DEFAULT_EXIT_YAW;
+  const jitter = ((seed % 7) - 3) * 2;
+  const yaw = base + jitter;
   return {
     id: `hs_${fromKind}_to_${toKind}`,
     label: SCENE_LABELS[toKind],
-    yaw: Math.round(yaw),
-    pitch: -4,
+    yaw: yaw > 180 ? yaw - 360 : yaw < -180 ? yaw + 360 : yaw,
+    pitch: -7,
     targetSceneId,
   };
 }

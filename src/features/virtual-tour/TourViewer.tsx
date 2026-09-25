@@ -10,6 +10,7 @@ import type { ShowroomSettings } from "@/services/store";
 import { useCompare } from "@/services/store";
 import type { Organization, Project, Unit } from "@/types/domain";
 
+import { ExternalTourEmbed } from "./ExternalTourEmbed";
 import { FloorScene } from "./FloorScene";
 import { PanoramaViewer } from "./PanoramaViewer";
 import { UnitTourCard } from "./UnitTourCard";
@@ -83,7 +84,8 @@ export function TourViewer({
   }
 
   function startTour360() {
-    if (!selectedTourUnit || selectedTourUnit.scenes.length === 0) return;
+    if (!selectedTourUnit) return;
+    if (selectedTourUnit.scenes.length === 0 && !selectedTourUnit.tour360Url) return;
     setTour360(true);
     trackEvent("virtual_tour_360_enter", { unit: selectedTourUnit.code });
   }
@@ -96,6 +98,13 @@ export function TourViewer({
   const handleSceneChange = useCallback((scene: VirtualTourScene) => {
     trackEvent("virtual_tour_360_scene_view", { scene: scene.kind });
   }, []);
+
+  const canTour =
+    selectedTourUnit !== null &&
+    (selectedTourUnit.scenes.length > 0 || Boolean(selectedTourUnit.tour360Url));
+  const tourCtaLabel = selectedTourUnit?.tour360Url
+    ? "Abrir el recorrido 360°"
+    : "Entrar al departamento en 3D";
 
   if (!floor) {
     return (
@@ -187,15 +196,24 @@ export function TourViewer({
             tour360 ? `Recorrido 360° ${selectedTourUnit?.name ?? ""}` : `Planta ${floor.name}`
           }
         >
-          {tour360 && selectedTourUnit && selectedTourUnit.scenes.length > 0 ? (
-            <PanoramaViewer
-              key={selectedTourUnit.id}
-              scenes={selectedTourUnit.scenes}
-              initialSceneId={selectedTourUnit.scenes[0]?.id ?? ""}
-              unitLabel={selectedTourUnit.name}
-              onBackToPlan={exitTour360}
-              onSceneChange={handleSceneChange}
-            />
+          {tour360 && selectedTourUnit ? (
+            selectedTourUnit.tour360Url ? (
+              <ExternalTourEmbed
+                key={`embed-${selectedTourUnit.id}`}
+                url={selectedTourUnit.tour360Url}
+                unitLabel={selectedTourUnit.name}
+                onBackToPlan={exitTour360}
+              />
+            ) : selectedTourUnit.scenes.length > 0 ? (
+              <PanoramaViewer
+                key={selectedTourUnit.id}
+                scenes={selectedTourUnit.scenes}
+                initialSceneId={selectedTourUnit.scenes[0]?.id ?? ""}
+                unitLabel={selectedTourUnit.name}
+                onBackToPlan={exitTour360}
+                onSceneChange={handleSceneChange}
+              />
+            ) : null
           ) : (
             <>
               <PanZoom
@@ -236,11 +254,11 @@ export function TourViewer({
             </>
           )}
 
-          {/* Acceso al recorrido 360° de la unidad seleccionada */}
-          {!tour360 && selectedTourUnit && selectedTourUnit.scenes.length > 0 && (
+          {/* Acceso al recorrido de la unidad seleccionada */}
+          {!tour360 && canTour && (
             <div className="absolute bottom-3 left-1/2 -translate-x-1/2">
               <Button size="lg" onClick={startTour360} className="shadow-panel shadow-black/30">
-                <Box className="size-4" /> Recorrer esta unidad en 360°
+                <Box className="size-4" /> {tourCtaLabel}
               </Button>
             </div>
           )}
@@ -266,6 +284,7 @@ export function TourViewer({
                 onConsult={onConsult}
                 onTour360={startTour360}
                 touring={tour360}
+                tourCtaLabel={tourCtaLabel}
               />
             ) : (
               <div className="flex h-full min-h-[220px] flex-col items-center justify-center gap-2 px-6 text-center">

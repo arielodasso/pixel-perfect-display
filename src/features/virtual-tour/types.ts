@@ -32,6 +32,11 @@ export interface VirtualTourUnit {
    * cámara por defecto, etc.
    */
   modelUrl?: string;
+  /**
+   * Tour 360° real de la unidad (Kuula, Matterport, urbania360, etc.).
+   * Cuando existe, el recorrido se embebe en lugar de usar el interior 3D.
+   */
+  tour360Url?: string;
   /** Escenas 360° del interior de la unidad (recorrido virtual). */
   scenes: VirtualTourScene[];
 }
@@ -52,9 +57,9 @@ export interface VirtualTourSceneHotspot {
 }
 
 /**
- * Escena de recorrido 360° de un ambiente de la unidad. La textura
- * equirectangular se genera proceduralmente (ver `panorama.ts`) a partir
- * de `seed` y `kind`, así el tour funciona sin assets externos.
+ * Escena de recorrido 360° de un ambiente de la unidad. La geometría del
+ * ambiente se construye en el momento con Three.js (ver `room.ts`) a partir
+ * de `kind` y `seed`, así el tour funciona sin assets externos.
  */
 export interface VirtualTourScene {
   id: string;

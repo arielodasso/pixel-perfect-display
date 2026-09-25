@@ -17,10 +17,18 @@ interface Props {
   onConsult: (unit: Unit) => void;
   onTour360?: () => void;
   touring?: boolean;
+  tourCtaLabel?: string;
 }
 
 /** Panel con el detalle comercial de una unidad dentro del Tour Virtual. */
-export function UnitTourCard({ unit, project, onConsult, onTour360, touring = false }: Props) {
+export function UnitTourCard({
+  unit,
+  project,
+  onConsult,
+  onTour360,
+  touring = false,
+  tourCtaLabel,
+}: Props) {
   const compare = useCompare();
   const [planOpen, setPlanOpen] = useState(false);
   const inCompare = compare.includes(unit.code);
@@ -124,7 +132,7 @@ export function UnitTourCard({ unit, project, onConsult, onTour360, touring = fa
             onClick={onTour360}
           >
             <Box className="size-4" />
-            {touring ? "Recorriendo en 360°…" : "Recorrer esta unidad en 360°"}
+            {touring ? "Viendo el recorrido…" : (tourCtaLabel ?? "Ver el interior de la unidad")}
           </Button>
         )}
         <Button className="w-full" variant="outline" onClick={() => setPlanOpen(true)}>

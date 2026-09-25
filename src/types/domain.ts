@@ -99,6 +99,11 @@ export interface VirtualTourUnitPlacement {
   /** Posición en % del plano de la planta (0-100). */
   x: number;
   y: number;
+  /**
+   * Tour 360° real de la unidad (Kuula, Matterport, urbania360, etc.).
+   * Si está vacío, el recorrido usa el interior 3D del proyecto.
+   */
+  tour360Url?: string;
 }
 
 export interface VirtualTourFloorConfig {
@@ -107,6 +112,8 @@ export interface VirtualTourFloorConfig {
   /** Nivel numérico (0 = planta baja). */
   level: number;
   floorPlanUrl?: string;
+  /** Tour 360° por defecto para las unidades de la planta sin URL propia. */
+  tour360Url?: string;
   unitPlacements: VirtualTourUnitPlacement[];
   hotspots: VirtualTourHotspotConfig[];
 }

@@ -1,4 +1,5 @@
-import { mulberry32, hashCode, PALETTES } from "@/features/virtual-tour/panorama";
+import { hashCode, mulberry32 } from "@/lib/random";
+import { PALETTES } from "@/features/virtual-tour/palettes";
 import type { VirtualTourSceneKind } from "@/features/virtual-tour/types";
 
 /**

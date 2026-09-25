@@ -225,7 +225,7 @@ function FloorEditor({
 
   return (
     <li className="grid gap-5 p-6">
-      <div className="grid items-end gap-4 sm:grid-cols-[1fr_100px_1fr_36px]">
+      <div className="grid items-end gap-4 sm:grid-cols-[1fr_100px_1fr_1fr_36px]">
         <div>
           <Label className="text-xs text-muted-foreground">Nombre</Label>
           <Input
@@ -251,6 +251,15 @@ function FloorEditor({
             value={floor.floorPlanUrl ?? ""}
             onChange={(e) => onChange({ floorPlanUrl: e.target.value })}
             placeholder="https://…"
+          />
+        </div>
+        <div>
+          <Label className="text-xs text-muted-foreground">Tour 360° por defecto</Label>
+          <Input
+            className="mt-1.5"
+            value={floor.tour360Url ?? ""}
+            onChange={(e) => onChange({ tour360Url: e.target.value })}
+            placeholder="Vacío = interior 3D"
           />
         </div>
         <Button
@@ -308,60 +317,74 @@ function FloorEditor({
             {floor.unitPlacements.map((placement, index) => {
               const unit = units.find((u) => u.id === placement.unitId);
               return (
-                <li
-                  key={placement.unitId}
-                  className="grid items-center gap-3 px-4 py-3 sm:grid-cols-[1fr_90px_90px_32px]"
-                >
-                  <span className="truncate text-sm">
-                    {unit ? `${unit.code} · Unidad ${unit.number}` : placement.unitId}
-                  </span>
+                <li key={placement.unitId} className="grid gap-3 px-4 py-3">
+                  <div className="grid items-center gap-3 sm:grid-cols-[1fr_90px_90px_32px]">
+                    <span className="truncate text-sm">
+                      {unit ? `${unit.code} · Unidad ${unit.number}` : placement.unitId}
+                    </span>
+                    <label className="flex items-center gap-2 text-xs text-muted-foreground">
+                      X
+                      <Input
+                        type="number"
+                        min={0}
+                        max={100}
+                        className="h-8"
+                        value={String(placement.x)}
+                        onChange={(e) =>
+                          onChange({
+                            unitPlacements: floor.unitPlacements.map((p, i) =>
+                              i === index ? { ...p, x: Number(e.target.value) || 0 } : p,
+                            ),
+                          })
+                        }
+                      />
+                    </label>
+                    <label className="flex items-center gap-2 text-xs text-muted-foreground">
+                      Y
+                      <Input
+                        type="number"
+                        min={0}
+                        max={100}
+                        className="h-8"
+                        value={String(placement.y)}
+                        onChange={(e) =>
+                          onChange({
+                            unitPlacements: floor.unitPlacements.map((p, i) =>
+                              i === index ? { ...p, y: Number(e.target.value) || 0 } : p,
+                            ),
+                          })
+                        }
+                      />
+                    </label>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      aria-label="Quitar unidad"
+                      onClick={() =>
+                        onChange({
+                          unitPlacements: floor.unitPlacements.filter((_, i) => i !== index),
+                        })
+                      }
+                    >
+                      <X className="size-4" />
+                    </Button>
+                  </div>
                   <label className="flex items-center gap-2 text-xs text-muted-foreground">
-                    X
+                    Tour 360° real (Kuula / Matterport / urbania360)
                     <Input
-                      type="number"
-                      min={0}
-                      max={100}
                       className="h-8"
-                      value={String(placement.x)}
+                      value={placement.tour360Url ?? ""}
                       onChange={(e) =>
                         onChange({
                           unitPlacements: floor.unitPlacements.map((p, i) =>
-                            i === index ? { ...p, x: Number(e.target.value) || 0 } : p,
+                            i === index ? { ...p, tour360Url: e.target.value } : p,
                           ),
                         })
                       }
+                      placeholder="Vacío = interior 3D del proyecto"
                     />
                   </label>
-                  <label className="flex items-center gap-2 text-xs text-muted-foreground">
-                    Y
-                    <Input
-                      type="number"
-                      min={0}
-                      max={100}
-                      className="h-8"
-                      value={String(placement.y)}
-                      onChange={(e) =>
-                        onChange({
-                          unitPlacements: floor.unitPlacements.map((p, i) =>
-                            i === index ? { ...p, y: Number(e.target.value) || 0 } : p,
-                          ),
-                        })
-                      }
-                    />
-                  </label>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    aria-label="Quitar unidad"
-                    onClick={() =>
-                      onChange({
-                        unitPlacements: floor.unitPlacements.filter((_, i) => i !== index),
-                      })
-                    }
-                  >
-                    <X className="size-4" />
-                  </Button>
                 </li>
               );
             })}

@@ -1,4 +1,4 @@
-import { Expand, Map as MapIcon, RotateCw } from "lucide-react";
+import { ArrowLeft, Expand, Map as MapIcon, RotateCw, AlertTriangle } from "lucide-react";
 import {
   useEffect,
   useRef,
@@ -10,9 +10,10 @@ import * as THREE from "three";
 
 import { trackEvent } from "@/lib/tracking";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 
-import { renderPanorama } from "./panorama";
-import type { VirtualTourScene, VirtualTourSceneHotspot } from "./types";
+import { buildRoom, type RoomScene } from "./room";
+import type { VirtualTourScene } from "./types";
 
 interface Props {
   scenes: VirtualTourScene[];
@@ -22,20 +23,21 @@ interface Props {
   onSceneChange?: (scene: VirtualTourScene) => void;
 }
 
-const MIN_FOV = 42;
-const MAX_FOV = 100;
+const MIN_FOV = 45;
+const MAX_FOV = 95;
+const EYE_HEIGHT = 1.62;
 const DRAG_FACTOR = 0.0032;
-
-/** Caché de texturas generadas (una por escena). */
-const textureCache = new Map<string, string>();
+const HOTSPOT_DISTANCE = 1.35;
+const scratchVector = new THREE.Vector3();
 
 /**
- * Visor de recorrido 360° de la unidad.
+ * Visor del recorrido interior de la unidad.
  *
- * Renderiza cada ambiente como una esfera equirectangular (Three.js/WebGL)
- * con arrastre para mirar alrededor, zoom con rueda/pinch, auto-rotación
- * hasta que el visitante interactúa, y hotspots 3D que navegan entre los
- * ambientes de la unidad.
+ * Cada ambiente es una escena 3D real (geometría, materiales y luz) generada
+ * en el momento — ver `room.ts` — y no una textura: la cámara está dentro del
+ * ambiente, con arrastre para mirar alrededor, zoom con rueda/pinch,
+ * auto-rotación hasta que el visitante interactúa y hotspots que navegan entre
+ * los ambientes de la unidad.
  */
 export function PanoramaViewer({
   scenes,
@@ -46,17 +48,19 @@ export function PanoramaViewer({
 }: Props) {
   const [activeSceneId, setActiveSceneId] = useState(initialSceneId);
   const [transitioning, setTransitioning] = useState(false);
+  const [interacted, setInteracted] = useState(false);
+  const [webglFailed, setWebglFailed] = useState(false);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const hostRef = useRef<HTMLDivElement>(null);
   const hotspotHostRef = useRef<HTMLDivElement>(null);
 
-  const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
   const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
-  const materialRef = useRef<THREE.MeshBasicMaterial | null>(null);
+  const rendererSceneRef = useRef<THREE.Scene | null>(null);
+  const roomRef = useRef<RoomScene | null>(null);
 
   const yawRef = useRef(0);
-  const pitchRef = useRef(-0.12);
+  const pitchRef = useRef(-0.04);
   const autoRotateRef = useRef(true);
   const pointersRef = useRef<Map<number, { x: number; y: number }>>(new Map());
   const pinchStartRef = useRef<{ dist: number; fov: number } | null>(null);
@@ -65,41 +69,48 @@ export function PanoramaViewer({
   const movedRef = useRef(false);
   const dragMoveRef = useRef(0);
 
+  const hotspotRefs = useRef<Map<string, HTMLButtonElement>>(new Map<string, HTMLButtonElement>());
+
   const activeScene = scenes.find((scene) => scene.id === activeSceneId) ?? scenes[0];
   activeSceneRef.current = activeScene;
 
-  // Inicialización de Three + loop de render.
+  // Escena Three + loop de render.
   useEffect(() => {
     const container = containerRef.current;
     const host = hostRef.current;
     if (!container || !host) return;
 
-    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+    let renderer: THREE.WebGLRenderer;
+    try {
+      renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+    } catch {
+      setWebglFailed(true);
+      return;
+    }
+    setWebglFailed(false);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.05;
     host.appendChild(renderer.domElement);
     renderer.domElement.style.width = "100%";
     renderer.domElement.style.height = "100%";
-    rendererRef.current = renderer;
+    renderer.domElement.style.display = "block";
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color("#0d1117");
+    rendererSceneRef.current = scene;
 
     const camera = new THREE.PerspectiveCamera(
       72,
       container.clientWidth / Math.max(1, container.clientHeight),
-      0.1,
-      120,
+      0.05,
+      60,
     );
-    camera.position.set(0, 0, 0);
+    camera.position.set(0, EYE_HEIGHT, 0);
     camera.rotation.order = "YXZ";
     cameraRef.current = camera;
-
-    const scene = new THREE.Scene();
-    const geometry = new THREE.SphereGeometry(50, 64, 48);
-    const material = new THREE.MeshBasicMaterial({
-      side: THREE.BackSide,
-      color: 0xffffff,
-    });
-    materialRef.current = material;
-    const sphere = new THREE.Mesh(geometry, material);
-    scene.add(sphere);
 
     let raf = 0;
 
@@ -116,7 +127,7 @@ export function PanoramaViewer({
     resize();
 
     function frame() {
-      if (autoRotateRef.current) yawRef.current += 0.0006;
+      if (autoRotateRef.current) yawRef.current += 0.0007;
       camera.rotation.x = pitchRef.current;
       camera.rotation.y = yawRef.current;
       camera.updateMatrixWorld();
@@ -131,46 +142,40 @@ export function PanoramaViewer({
     return () => {
       cancelAnimationFrame(raf);
       observer.disconnect();
-      geometry.dispose();
-      material.map?.dispose();
-      material.dispose();
+      roomRef.current?.dispose();
+      roomRef.current = null;
       renderer.dispose();
       host.removeChild(renderer.domElement);
-      rendererRef.current = null;
       cameraRef.current = null;
-      materialRef.current = null;
+      rendererSceneRef.current = null;
     };
   }, []);
 
-  // Carga la textura del ambiente activo y desbloquea la transición.
+  // Monta la geometría del ambiente activo.
   useEffect(() => {
-    const material = materialRef.current;
     const scene = scenes.find((item) => item.id === activeSceneId) ?? scenes[0];
-    if (!material || !scene) {
-      setTransitioning(false);
-      return;
-    }
-    let dataUrl = textureCache.get(scene.id);
-    if (!dataUrl) {
-      dataUrl = renderPanorama(scene);
-      textureCache.set(scene.id, dataUrl);
-    }
-    let cancelled = false;
-    const image = new Image();
-    image.onload = () => {
-      if (cancelled) return;
-      const texture = new THREE.Texture(image);
-      texture.colorSpace = THREE.SRGBColorSpace;
-      texture.needsUpdate = true;
-      if (material.map) material.map.dispose();
-      material.map = texture;
-      material.needsUpdate = true;
-      setTransitioning(false);
-    };
-    image.src = dataUrl;
+    if (!scene) return;
+
+    roomRef.current?.dispose();
+    roomRef.current = null;
+
+    const room = buildRoom({
+      kind: scene.kind,
+      seed: scene.seed,
+      exits: scene.hotspots.map((hotspot) => hotspot.yaw),
+    });
+    rendererSceneRef.current?.add(room.group);
+    roomRef.current = room;
+
+    setTransitioning(false);
     onSceneChange?.(scene);
+
     return () => {
-      cancelled = true;
+      room.group.removeFromParent();
+      if (roomRef.current === room) {
+        room.dispose();
+        roomRef.current = null;
+      }
     };
   }, [activeSceneId, scenes, onSceneChange]);
 
@@ -180,6 +185,23 @@ export function PanoramaViewer({
     };
   }, []);
 
+  if (webglFailed) {
+    return (
+      <div className="relative h-full w-full flex items-center justify-center bg-[oklch(0.11_0.008_265)]">
+        <div className="text-center px-6">
+          <AlertTriangle className="size-12 mx-auto text-reserved" />
+          <h3 className="mt-4 text-lg font-medium text-white">Tu navegador no soporta WebGL</h3>
+          <p className="mt-2 text-sm text-white/60">
+            El recorrido interior requiere WebGL. Podés volver al plano para ver la planta.
+          </p>
+          <Button variant="outline" size="lg" className="mt-4" onClick={onBackToPlan}>
+            <ArrowLeft className="size-4" /> Volver al plano
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   function navigate(sceneId: string, source: "hotspot" | "nav") {
     if (sceneId === activeSceneId) return;
     trackEvent("virtual_tour_360_scene", { scene: sceneId, via: source });
@@ -187,18 +209,24 @@ export function PanoramaViewer({
     if (timerRef.current) clearTimeout(timerRef.current);
     timerRef.current = setTimeout(() => {
       setActiveSceneId(sceneId);
-    }, 260);
+    }, 240);
   }
 
   // ---- Interacción (drag / zoom / pinch) --------------------------------
 
+  function stopAutoRotate() {
+    if (autoRotateRef.current) {
+      autoRotateRef.current = false;
+      setInteracted(true);
+    }
+  }
+
   function onPointerDown(event: ReactPointerEvent<HTMLDivElement>) {
-    autoRotateRef.current = false;
+    stopAutoRotate();
     movedRef.current = false;
     dragMoveRef.current = 0;
     pointersRef.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
     if (pointersRef.current.size === 2) {
-      // Pinch: capturamos ambos dedos para no perder el gesto fuera del visor.
       for (const pointerId of pointersRef.current.keys()) {
         capturePointer(event.currentTarget, pointerId);
       }
@@ -239,13 +267,11 @@ export function PanoramaViewer({
         capturePointer(event.currentTarget, event.pointerId);
       }
       yawRef.current -= dx * DRAG_FACTOR;
-      pitchRef.current = clamp(pitchRef.current - dy * DRAG_FACTOR, -1.35, 1.35);
+      pitchRef.current = clamp(pitchRef.current - dy * DRAG_FACTOR, -1.2, 1.2);
     }
   }
 
   function endPointer(event: ReactPointerEvent<HTMLDivElement>) {
-    // Liberamos el pointer capture para que el click posterior alcance los
-    // hotspots/controles bajo el puntero.
     const el = event.currentTarget;
     if (el.hasPointerCapture(event.pointerId)) el.releasePointerCapture(event.pointerId);
     pointersRef.current.delete(event.pointerId);
@@ -253,7 +279,7 @@ export function PanoramaViewer({
   }
 
   function onWheel(event: ReactWheelEvent<HTMLDivElement>) {
-    autoRotateRef.current = false;
+    stopAutoRotate();
     const camera = cameraRef.current;
     if (!camera) return;
     applyFov(clamp(camera.fov + Math.sign(event.deltaY) * 7, MIN_FOV, MAX_FOV));
@@ -268,14 +294,12 @@ export function PanoramaViewer({
 
   function resetView() {
     yawRef.current = 0;
-    pitchRef.current = -0.12;
+    pitchRef.current = -0.04;
     applyFov(72);
-    autoRotateRef.current = false;
+    stopAutoRotate();
   }
 
   // ---- Proyección de hotspots a pantalla -------------------------------
-
-  const hotspotRefs = useRef<Map<string, HTMLButtonElement>>(new Map<string, HTMLButtonElement>());
 
   function positionHotspots() {
     const camera = cameraRef.current;
@@ -286,7 +310,7 @@ export function PanoramaViewer({
 
     const width = host.clientWidth;
     const height = host.clientHeight;
-    const v = new THREE.Vector3();
+    const v = scratchVector;
 
     for (const hotspot of active.hotspots) {
       const el = hotspotRefs.current.get(hotspot.id);
@@ -294,9 +318,10 @@ export function PanoramaViewer({
       const yaw = (hotspot.yaw * Math.PI) / 180;
       const pitch = (hotspot.pitch * Math.PI) / 180;
       v.set(-Math.sin(yaw) * Math.cos(pitch), Math.sin(pitch), -Math.cos(yaw) * Math.cos(pitch))
-        .multiplyScalar(48)
+        .multiplyScalar(HOTSPOT_DISTANCE)
+        .add(camera.position)
         .project(camera);
-      const visible = v.z < 1 && v.z > -1 && v.x >= -1 && v.x <= 1 && v.y >= -1 && v.y <= 1;
+      const visible = v.z < 1 && v.x >= -1 && v.x <= 1 && v.y >= -1 && v.y <= 1;
       if (!visible) {
         el.style.opacity = "0";
         el.style.pointerEvents = "none";
@@ -339,7 +364,7 @@ export function PanoramaViewer({
     >
       <div ref={hostRef} className="absolute inset-0" />
 
-      {/* Hotspots 3D */}
+      {/* Hotspots sobre las puertas reales del ambiente */}
       <div ref={hotspotHostRef} className="pointer-events-none absolute inset-0 overflow-hidden">
         {activeScene &&
           sceneHotspots.map((hotspot) => (
@@ -360,7 +385,7 @@ export function PanoramaViewer({
         <div className="flex items-center justify-between gap-3">
           <div className="min-w-0">
             <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-white/60">
-              Recorrido 360°
+              Recorrido interior
             </p>
             <p className="mt-0.5 truncate text-base font-medium text-white">
               {unitLabel} · {activeScene?.label}
@@ -379,7 +404,7 @@ export function PanoramaViewer({
       </div>
 
       {/* Ayuda inicial */}
-      {autoRotateRef.current && (
+      {!interacted && (
         <div className="pointer-events-none absolute bottom-28 left-1/2 -translate-x-1/2 rounded-full border border-white/15 bg-black/40 px-4 py-1.5 text-center text-[11px] text-white/75 backdrop-blur-sm sm:bottom-24">
           Arrastrá para explorar · rueda o pinch para acercar
         </div>
